@@ -1,6 +1,7 @@
 # find_package(Dependency CONFIG REQUIRED)
 
 find_package(OpenGL REQUIRED)
+find_package(slang CONFIG REQUIRED)
 
 include(FetchContent)
 

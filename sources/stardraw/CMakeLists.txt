@@ -5,6 +5,8 @@ target_sources(stardraw PRIVATE
         api/api_impl.cpp
         api/pipeline.cpp
 
+        api/slang.cpp
+
         gl45/commands_impl.cpp
         gl45/gl45_impl.hpp gl45/gl45_impl.cpp
         gl45/object_states.hpp gl45/object_states.cpp
@@ -16,9 +18,10 @@ target_sources(stardraw PUBLIC FILE_SET HEADERS BASE_DIRS ${H_SOURCES_ROOT} FILE
         api/types.hpp
         api/api_impl.hpp
         api/polymorphic_list.hpp
-
         api/descriptors.hpp
         api/commands.hpp
+
+        api/slang.hpp
 )
 
 target_include_directories(stardraw PUBLIC
@@ -33,3 +36,4 @@ target_include_directories(stardraw PRIVATE ${OPENGL_INCLUDE_DIR})
 target_link_libraries(stardraw PRIVATE ${OPENGL_LIBRARIES})
 target_link_libraries(stardraw PRIVATE TracyClient)
 target_link_libraries(stardraw PRIVATE glad)
+target_link_libraries(stardraw PRIVATE slang::slang)

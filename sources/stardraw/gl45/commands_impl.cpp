@@ -119,7 +119,7 @@ namespace stardraw::gl45
         TracyGpuZone("[Stardraw] Execute draw cmd");
 
         GLsizeiptr index_offset_unused;
-        const status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, false);
+        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, false);
         if (is_error_status(bind_result)) return bind_result;
 
         glDrawArraysInstancedBaseInstance(gl_draw_mode(cmd->mode), cmd->start_vertex, cmd->count, cmd->instances, cmd->start_instance);
@@ -132,7 +132,7 @@ namespace stardraw::gl45
         TracyGpuZone("[Stardraw] Execute draw indexed cmd");
 
         GLsizeiptr index_offset;
-        const status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset, true);
+        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset, true);
         if (is_error_status(bind_result)) return bind_result;
 
         const GLenum index_element_type = gl_index_size(cmd->index_type);
@@ -149,7 +149,7 @@ namespace stardraw::gl45
         TracyGpuZone("[Stardraw] Execute draw indirect cmd");
 
         GLsizeiptr index_offset_unused;
-        const status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, false);
+        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, false);
         if (is_error_status(bind_result)) return bind_result;
 
         glMultiDrawArraysIndirect(gl_draw_mode(cmd->mode), reinterpret_cast<const void*>(cmd->indirect_source_offset * sizeof(draw_arrays_indirect_params)), cmd->draw_count, 0);
@@ -162,7 +162,7 @@ namespace stardraw::gl45
         TracyGpuZone("[Stardraw] Execute draw indirect cmd");
 
         GLsizeiptr index_offset_unused;
-        const status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, true);
+        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, true);
         if (is_error_status(bind_result)) return bind_result;
 
         //NOTE: will not work properly if a streaming buffer is used for indices
