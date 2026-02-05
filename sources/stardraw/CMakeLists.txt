@@ -32,7 +32,10 @@ target_include_directories(stardraw PUBLIC
         ${Vulkan_INCLUDE_DIRS}
 )
 
+target_compile_options(stardraw PUBLIC /EHsc -Wno-microsoft-extra-qualification)
+
 set_target_properties(stardraw PROPERTIES LINKER_LANGUAGE CXX)
+
 target_include_directories(stardraw PRIVATE ${OPENGL_INCLUDE_DIR})
 
 target_link_libraries(stardraw PRIVATE ${OPENGL_LIBRARIES})
