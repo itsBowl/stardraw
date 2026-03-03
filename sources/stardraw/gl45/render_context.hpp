@@ -2,8 +2,12 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "object_states.hpp"
 #include "types.hpp"
+#include "object_states/buffer_state.hpp"
+#include "object_states/draw_specification_state.hpp"
+#include "object_states/shader_state.hpp"
+#include "object_states/texture_state.hpp"
+#include "object_states/vertex_specification_state.hpp"
 
 #include "stardraw/api/commands.hpp"
 #include "stardraw/api/render_context.hpp"

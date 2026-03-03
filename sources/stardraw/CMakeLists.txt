@@ -9,10 +9,14 @@ target_sources(stardraw PRIVATE
 
         gl45/commands_impl.cpp
         gl45/render_context.hpp gl45/render_context.cpp
-        gl45/object_states.hpp gl45/object_states.cpp
         gl45/types.hpp
         gl45/window.hpp gl45/window.cpp
         gl45/staging_buffer_uploader.hpp gl45/staging_buffer_uploader.cpp
+        gl45/object_states/buffer_state.hpp gl45/object_states/buffer_state.cpp
+        gl45/object_states/draw_specification_state.hpp gl45/object_states/draw_specification_state.cpp
+        gl45/object_states/shader_state.hpp gl45/object_states/shader_state.cpp
+        gl45/object_states/texture_state.hpp gl45/object_states/texture_state.cpp
+        gl45/object_states/vertex_specification_state.hpp gl45/object_states/vertex_specification_state.cpp
 
         vk13/Device.hpp vk13/Device.cpp
         vk13/simple_window.hpp vk13/simple_window.cpp
