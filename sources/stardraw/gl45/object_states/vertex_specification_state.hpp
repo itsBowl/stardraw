@@ -1,6 +1,6 @@
 #pragma once
+#include "../gl_headers.hpp"
 #include "../types.hpp"
-#include "glad/glad.h"
 #include "stardraw/api/commands.hpp"
 namespace stardraw::gl45
 {

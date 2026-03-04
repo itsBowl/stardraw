@@ -7,7 +7,7 @@
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyOpenGL.hpp>
 
-#include "glad/include/glad/glad.h"
+#include "gl_headers.hpp"
 #include "stardraw/internal/simple_block_allocator.hpp"
 
 namespace stardraw::gl45

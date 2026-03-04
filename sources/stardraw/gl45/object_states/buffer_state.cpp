@@ -3,9 +3,9 @@
 #include <format>
 #include <tracy/Tracy.hpp>
 #include <tracy/TracyOpenGL.hpp>
+#include "../gl_headers.hpp"
 #include "../staging_buffer_uploader.hpp"
 #include "../types.hpp"
-#include "glad/glad.h"
 #include "stardraw/api/memory_transfer.hpp"
 
 namespace stardraw::gl45
