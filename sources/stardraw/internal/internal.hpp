@@ -8,7 +8,7 @@ struct std::hash<stardraw::shader_parameter_location>
 {
     std::size_t operator()(const stardraw::shader_parameter_location& key) const noexcept
     {
-        return hash<uint32_t>()(key.binding_range_index + key.binding_range + key.byte_address + key.root_idx);
+        return hash<u32>()(key.binding_range_index + key.binding_range + key.byte_address + key.root_idx);
     }
 };
 
@@ -16,8 +16,8 @@ namespace stardraw
 {
     struct binding_location_info
     {
-        int64_t set;
-        int64_t slot;
+        i64 set;
+        i64 slot;
         //The binding type that the location exists inside
         //May not always be the same as the actual variable the location references -
         //for instance, for plain data, it will be the containing buffer variable.

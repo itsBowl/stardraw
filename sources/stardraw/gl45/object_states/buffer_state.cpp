@@ -73,27 +73,6 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    /*
-    status buffer_state::upload_data_direct(const GLintptr address, const void* const data, const GLsizeiptr bytes)
-    {
-        ZoneScoped;
-        TracyGpuZone("[Stardraw] Direct buffer upload");
-        if (data == nullptr) return {status_type::UNEXPECTED, "Data pointer was null!"};
-        if (!is_in_buffer_range(address, bytes)) return {status_type::RANGE_OVERFLOW, std::format("Requested upload range is out of range in buffer '{0}'", buffer_name)};
-
-        if (main_buff_pointer == nullptr)
-        {
-            const status map_status = map_main_buffer();
-            if (is_status_error(map_status)) return map_status;
-        }
-
-        const GLbyte* source_pointer = static_cast<const GLbyte*>(data);
-        GLbyte* dest_pointer = static_cast<GLbyte*>(main_buff_pointer);
-        memcpy(dest_pointer + address, source_pointer, bytes);
-        return status_type::SUCCESS;
-    }
-    */
-
     status buffer_state::prepare_upload_data_streaming(const GLintptr address, const GLintptr bytes, memory_transfer_handle** out_handle)
     {
         ZoneScoped;
@@ -101,8 +80,8 @@ namespace stardraw::gl45
         if (!is_in_buffer_range(address, bytes)) return {status_type::RANGE_OVERFLOW, std::format("Requested upload range is out of range in buffer '{0}'", buffer_name)};
 
         gl_memory_transfer_handle* staged_handle = nullptr;
-        status alloc_status = staging_uploader.allocate_upload(address, bytes, main_buffer_size, &staged_handle);
-        if (is_status_error(alloc_status)) return alloc_status;
+        status allocate_status = staging_uploader.allocate_upload(address, bytes, main_buffer_size, &staged_handle);
+        if (is_status_error(allocate_status)) return allocate_status;
         *out_handle = staged_handle;
         return status_type::SUCCESS;
     }

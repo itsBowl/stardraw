@@ -5,7 +5,6 @@ target_sources(stardraw PRIVATE
         internal/window.cpp
         internal/shaders.cpp
         internal/glfw_window.hpp internal/glfw_window.cpp
-        internal/simple_block_allocator.hpp internal/simple_block_allocator.cpp
 
         gl45/commands_impl.cpp
         gl45/render_context.hpp gl45/render_context.cpp
@@ -25,7 +24,6 @@ target_sources(stardraw PRIVATE
 target_sources(stardraw PUBLIC FILE_SET HEADERS BASE_DIRS ${H_SOURCES_ROOT} FILES
         api/render_context.hpp
         api/types.hpp
-        api/polymorphic_ptr.hpp
         api/descriptors.hpp
         api/commands.hpp
         api/window.hpp
@@ -45,6 +43,7 @@ set_target_properties(stardraw PROPERTIES LINKER_LANGUAGE CXX)
 
 target_include_directories(stardraw PRIVATE ${OPENGL_INCLUDE_DIR})
 
+target_link_libraries(stardraw PUBLIC starlib)
 target_link_libraries(stardraw PRIVATE ${OPENGL_LIBRARIES})
 target_link_libraries(stardraw PRIVATE TracyClient)
 target_link_libraries(stardraw PRIVATE glad)

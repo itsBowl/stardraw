@@ -4,10 +4,13 @@
 
 #include "shaders.hpp"
 #include "types.hpp"
+#include "starlib/types/polymorphic_ptr.hpp"
+#include "starlib/types/sized_numerics.hpp"
 
 namespace stardraw
 {
-    enum class descriptor_type : uint8_t
+    using namespace starlib;
+    enum class descriptor_type : u8
     {
         BUFFER, SHADER, TEXTURE, TEXTURE_SAMPLER, VERTEX_SPECIFICATION, DRAW_SPECIFICATION,
     };
@@ -32,28 +35,28 @@ namespace stardraw
     typedef std::vector<polymorphic_ptr<descriptor>> descriptor_list;
 
     ///NOTE: Buffer memory storage cannot be guarenteed on OpenGL, but SYSRAM guarentees it will be possible to write into the buffer directly.
-    enum class buffer_memory_storage : uint8_t
+    enum class buffer_memory_storage : u8
     {
         SYSRAM, VRAM,
     };
 
     struct buffer_descriptor final : descriptor
     {
-        explicit buffer_descriptor(const std::string_view& name, const uint64_t size, const buffer_memory_storage memory = buffer_memory_storage::VRAM) : descriptor(name), size(size), memory(memory) {}
+        explicit buffer_descriptor(const std::string_view& name, const u64 size, const buffer_memory_storage memory = buffer_memory_storage::VRAM) : descriptor(name), size(size), memory(memory) {}
 
         [[nodiscard]] descriptor_type type() const override
         {
             return descriptor_type::BUFFER;
         }
 
-        uint64_t size;
+        u64 size;
         buffer_memory_storage memory;
     };
 
-    enum class vertex_data_type : uint8_t
+    enum class vertex_data_type : u8
     {
         //Simple non-converting types (same representation in shader and buffer)
-        UINT_U8, UNT2_U8, UINT3_U8, UINT4_U8,
+        UINT_U8, UINT2_U8, UINT3_U8, UINT4_U8,
         UINT_U16, UINT2_U16, UINT3_U16, UINT4_U16,
         UINT_U32, UINT2_U32, UINT3_U32, UINT4_U32,
 
@@ -64,7 +67,7 @@ namespace stardraw
         FLOAT_F16, FLOAT2_F16, FLOAT3_F16, FLOAT4_F16,
         FLOAT_F32, FLOAT2_F32, FLOAT3_F32, FLOAT4_F32,
 
-        //Normalized float types (floats in shader, interger types in buffer)
+        //Normalized f32 types (f32s in shader, interger types in buffer)
         FLOAT_U8_NORM, FLOAT2_U8_NORM, FLOAT3_U8_NORM, FLOAT4_U8_NORM,
         FLOAT_I8_NORM, FLOAT2_I8_NORM, FLOAT3_I8_NORM, FLOAT4_I8_NORM,
 
@@ -74,10 +77,10 @@ namespace stardraw
 
     struct vertex_data_binding
     {
-        constexpr vertex_data_binding(const std::string_view& buffer, const vertex_data_type& type, const uint32_t instance_divisor = 0) : type(type), instance_divisor(instance_divisor), buffer(buffer) {}
+        constexpr vertex_data_binding(const std::string_view& buffer, const vertex_data_type& type, const u32 instance_divisor = 0) : type(type), instance_divisor(instance_divisor), buffer(buffer) {}
 
         vertex_data_type type;
-        uint32_t instance_divisor;
+        u32 instance_divisor;
         std::string buffer;
     };
 
@@ -118,7 +121,7 @@ namespace stardraw
     struct shader_descriptor final : descriptor
     {
         shader_descriptor(const std::string_view& name, const std::vector<shader_stage>& stages) : descriptor(name), stages(stages), cache_ptr(nullptr), cache_size(0) {}
-        shader_descriptor(const std::string_view& name, const void* cache_ptr, const uint64_t cache_size) : descriptor(name), stages({}), cache_ptr(cache_ptr), cache_size(cache_size) {}
+        shader_descriptor(const std::string_view& name, const void* cache_ptr, const u64 cache_size) : descriptor(name), stages({}), cache_ptr(cache_ptr), cache_size(cache_size) {}
 
         [[nodiscard]] descriptor_type type() const override
         {
@@ -127,17 +130,17 @@ namespace stardraw
 
         std::vector<shader_stage> stages;
         const void* cache_ptr;
-        const uint64_t cache_size;
+        const u64 cache_size;
     };
 
-    enum class texture_data_type : uint8_t
+    enum class texture_data_type : u8
     {
         //Depth / stencil formats
         DEPTH_32, DEPTH_24, DEPTH_16,
         DEPTH_32_STENCIL_8, DEPTH_24_STENCIL_8,
         STENCIL_8,
 
-        //Standard 8-bit normalized formats (8-bit uint storage, 0-1 float reads)
+        //Standard 8-bit normalized formats (8-bit uint storage, 0-1 f32 reads)
         R_8, RG_8, RGB_8, RGBA_8,
         SRGB_8, SRGBA_8,
 
@@ -156,7 +159,7 @@ namespace stardraw
         //TODO: Support compressed textures?
     };
 
-    enum class texture_shape : uint8_t
+    enum class texture_shape : u8
     {
         _1D,
         _2D,
@@ -164,7 +167,7 @@ namespace stardraw
         CUBE_MAP,
     };
 
-    enum class texture_msaa_level : uint8_t
+    enum class texture_msaa_level : u8
     {
         NONE = 0, X4 = 4, X8 = 8, X16 = 16, X32 = 32,
     };
@@ -176,70 +179,70 @@ namespace stardraw
         texture_msaa_level msaa;
 
         //Number of mipmaps to allocate *including* the base (level 0) level. Must be >0
-        uint8_t mipmap_levels = 1;
-        uint32_t width;
-        uint32_t height;
-        uint32_t depth = 0;
+        u8 mipmap_levels = 1;
+        u32 width;
+        u32 height;
+        u32 depth = 0;
 
         //Number of texture layers. Must be a multiple of 6 for cubemaps, and at least 1 for all other texture types. >1 creates an array texture.
-        uint32_t texture_layers = 1;
+        u32 texture_layers = 1;
 
         //Exclusive to view textures:
-        uint8_t view_texture_base_mipmap = 0;
-        uint8_t view_texture_base_array_index = 0;
+        u8 view_texture_base_mipmap = 0;
+        u8 view_texture_base_array_index = 0;
 
-        inline static texture_format create_1d(const uint32_t width, const texture_data_type = texture_data_type::RGBA_8, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1)
+        inline static texture_format create_1d(const u32 width, const texture_data_type = texture_data_type::RGBA_8, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
             return {data_type, texture_shape::_1D, texture_msaa_level::NONE, mipmap_levels, width, 0, 0, 1, 0};
         }
 
-        inline static texture_format create_1d_array(const uint32_t width, const uint32_t array_size, const texture_data_type = texture_data_type::RGBA_8, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1)
+        inline static texture_format create_1d_array(const u32 width, const u32 array_size, const texture_data_type = texture_data_type::RGBA_8, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
             return {data_type, texture_shape::_1D, texture_msaa_level::NONE, mipmap_levels, width, 0, 0, array_size, 0};
         }
 
-        inline static texture_format create_2d(const uint32_t width, const uint32_t height, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
+        inline static texture_format create_2d(const u32 width, const u32 height, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
         {
             return {data_type, texture_shape::_2D, msaa, mipmap_levels, width, height, 0, 1, 0};
         }
 
-        inline static texture_format create_2d_array(const uint32_t width, const uint32_t height, const uint32_t array_size, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
+        inline static texture_format create_2d_array(const u32 width, const u32 height, const u32 array_size, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
         {
             return {data_type, texture_shape::_2D, msaa, mipmap_levels, width, height, 0, array_size, 0};
         }
 
-        inline static texture_format create_3d(const uint32_t width, const uint32_t height, const uint32_t depth, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
+        inline static texture_format create_3d(const u32 width, const u32 height, const u32 depth, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
         {
             return {data_type, texture_shape::_3D, msaa, mipmap_levels, width, height, depth, 1, 0};
         }
 
-        inline static texture_format create_cube(const uint32_t width, const uint32_t height, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1)
+        inline static texture_format create_cube(const u32 width, const u32 height, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
             return {data_type, texture_shape::CUBE_MAP, texture_msaa_level::NONE, mipmap_levels, width, height, 0, 6, 0};
         }
 
-        inline static texture_format create_cube_array(const uint32_t width, const uint32_t height, const uint32_t num_cubemaps, const texture_data_type data_type = texture_data_type::RGBA_8, const uint8_t mipmap_levels = 1)
+        inline static texture_format create_cube_array(const u32 width, const u32 height, const u32 num_cubemaps, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
             return {data_type, texture_shape::CUBE_MAP, texture_msaa_level::NONE, mipmap_levels, width, height, 0, num_cubemaps * 6, 0};
         }
     };
 
-    enum class texture_anisotropy_level : uint8_t
+    enum class texture_anisotropy_level : u8
     {
         NONE = 1, X2 = 2, X4 = 4, X8 = 8, X16 = 16,
     };
 
-    enum class texture_filtering_mode : uint8_t
+    enum class texture_filtering_mode : u8
     {
         NEAREST = 0, LINEAR = 1,
     };
 
-    enum class texture_wrapping_mode : uint8_t
+    enum class texture_wrapping_mode : u8
     {
         CLAMP, REPEAT, MIRROR, BORDER
     };
 
-    enum class texture_border_color : uint8_t
+    enum class texture_border_color : u8
     {
         INTEGER_BLACK,
         INTEGER_WHITE,
@@ -278,9 +281,9 @@ namespace stardraw
         texture_swizzle_mode swizzling = {};
 
         texture_filtering_mode mipmap_filter = texture_filtering_mode::NEAREST;
-        uint32_t mipmap_min_level = 0;
-        uint32_t mipmap_max_level = 99;
-        float mipmap_bias = 0;
+        u32 mipmap_min_level = 0;
+        u32 mipmap_max_level = 99;
+        f32 mipmap_bias = 0;
     };
 
     namespace texture_sampling_configs

@@ -17,7 +17,7 @@ namespace stardraw::gl45
         ~window() override;
 
     private:
-        void on_framebuffer_resize(const uint32_t width, const uint32_t height) override;
+        void on_framebuffer_resize(const u32 width, const u32 height) override;
 
     public:
         void TEMP_UPDATE_WINDOW() override

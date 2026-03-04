@@ -3,21 +3,22 @@
 #include <string>
 #include <string_view>
 
-#include "polymorphic_ptr.hpp"
+#include "starlib/types/sized_numerics.hpp"
 
 namespace stardraw
 {
-    enum class graphics_api : uint8_t
+    using namespace starlib;
+    enum class graphics_api : u8
     {
         GL45,
     };
 
-    enum class signal_status : uint8_t
+    enum class signal_status : u8
     {
         SIGNALLED, NOT_SIGNALLED, TIMED_OUT, UNKNOWN_SIGNAL, CONTEXT_ERROR
     };
 
-    enum class status_type : uint8_t
+    enum class status_type : u8
     {
         SUCCESS, UNSUPPORTED, UNIMPLEMENTED, NOTHING_TO_DO,
         ALREADY_INITIALIZED, NOT_INITIALIZED,
@@ -48,7 +49,7 @@ namespace stardraw
     struct object_identifier
     {
         explicit object_identifier(const std::string_view& string) : hash(std::hash<std::string_view>()(string)), name(string) {}
-        uint64_t hash;
+        u64 hash;
         std::string name;
     };
 

@@ -24,7 +24,7 @@ namespace stardraw
     struct linked_set
     {
         Slang::ComPtr<slang::IComponentType> linked_components;
-        std::unordered_map<shader_entry_point, uint32_t> entry_point_indexes;
+        std::unordered_map<shader_entry_point, u32> entry_point_indexes;
     };
 
     static slang::IGlobalSession* global_slang_context;
@@ -39,30 +39,30 @@ namespace stardraw
         return status_type::SUCCESS;
     }
 
-    void* layout_shader_buffer_memory(const shader_buffer_layout* layout, const void* data, const uint64_t data_size)
+    void* layout_shader_buffer_memory(const shader_buffer_layout* layout, const void* data, const u64 data_size)
     {
         if (layout == nullptr || data == nullptr) return nullptr;
 
-        const uint64_t element_count = data_size / layout->packed_size;
-        const uint8_t* in_bytes = static_cast<const uint8_t*>(data);
-        uint8_t* output = static_cast<uint8_t*>(malloc(layout->padded_size * element_count));
+        const u64 element_count = data_size / layout->packed_size;
+        const u8* in_bytes = static_cast<const u8*>(data);
+        u8* output = static_cast<u8*>(malloc(layout->padded_size * element_count));
         if (layout->padded_size == layout->packed_size)
         {
             memcpy(output, in_bytes, layout->padded_size * element_count);
             return output;
         }
 
-        for (uint64_t idx = 0; idx < element_count; idx++)
+        for (u64 idx = 0; idx < element_count; idx++)
         {
-            const uint64_t base_read_address = layout->packed_size * idx;
-            const uint64_t base_write_address = layout->padded_size * idx;
+            const u64 base_read_address = layout->packed_size * idx;
+            const u64 base_write_address = layout->padded_size * idx;
 
-            uint64_t current_write_offset = 0;
-            uint64_t current_read_offset = 0;
+            u64 current_write_offset = 0;
+            u64 current_read_offset = 0;
 
             for (const shader_buffer_layout::pad& pad : layout->pads)
             {
-                const uint64_t size_to_pad_start = pad.address - current_write_offset;
+                const u64 size_to_pad_start = pad.address - current_write_offset;
                 memcpy(output + base_write_address + current_write_offset, in_bytes + base_read_address + current_read_offset, size_to_pad_start);
                 current_write_offset = pad.address + pad.size;
                 current_read_offset += size_to_pad_start;
@@ -160,7 +160,7 @@ namespace stardraw
         return status_type::SUCCESS;
     }
 
-    status load_shader_module(const std::string_view& module_name, const void* cache_ptr, const uint64_t cache_size)
+    status load_shader_module(const std::string_view& module_name, const void* cache_ptr, const u64 cache_size)
     {
         const std::string fake_path = std::format("{0}_fakepath.slang", module_name);
         Slang::ComPtr<slang::IBlob> diagnostics;
@@ -183,7 +183,7 @@ namespace stardraw
         return status_type::SUCCESS;
     }
 
-    status cache_shader_module(const std::string& module_name, void** out_cache_ptr, uint64_t& out_cache_size)
+    status cache_shader_module(const std::string& module_name, void** out_cache_ptr, u64& out_cache_size)
     {
         if (!loaded_modules.contains(module_name)) return {status_type::UNKNOWN, std::format("No loaded slang module called '{0}' found.", module_name)};
         const Slang::ComPtr<slang::IModule> module = loaded_modules[module_name];
@@ -192,7 +192,7 @@ namespace stardraw
         const SlangResult serialize_result = module->serialize(serialized_blob.writeRef());
         if (SLANG_FAILED(serialize_result)) return {status_type::BACKEND_ERROR, std::format("Failed to serialize module '{0}'", module_name)};
 
-        const uint64_t cache_size = serialized_blob->getBufferSize();
+        const u64 cache_size = serialized_blob->getBufferSize();
 
         *out_cache_ptr = malloc(cache_size);
         memcpy(*out_cache_ptr, serialized_blob->getBufferPointer(), cache_size);
@@ -205,9 +205,9 @@ namespace stardraw
     status link_shader_modules(const std::string& linked_set_name, const std::vector<shader_entry_point>& entry_points, const std::vector<std::string>& additional_modules)
     {
         std::vector<slang::IComponentType*> shader_components;
-        std::unordered_map<shader_entry_point, uint32_t> entry_point_index_map;
+        std::unordered_map<shader_entry_point, u32> entry_point_index_map;
 
-        for (uint32_t idx = 0; idx < entry_points.size(); idx++)
+        for (u32 idx = 0; idx < entry_points.size(); idx++)
         {
             const shader_entry_point& entry_point = entry_points[idx];
 
@@ -276,7 +276,7 @@ namespace stardraw
         const Slang::ComPtr<slang::IComponentType> linked_shader = linked_set.linked_components;
 
         if (!linked_set.entry_point_indexes.contains(entry_point)) return {status_type::UNKNOWN, "Entry point not found in linked set"};
-        const uint32_t entry_point_idx = linked_set.entry_point_indexes.at(entry_point);
+        const u32 entry_point_idx = linked_set.entry_point_indexes.at(entry_point);
 
         const int target_index = get_target_index_for_api(api);
         if (target_index == -1) return {status_type::UNSUPPORTED, "API selected is not currently supported for slang shaders"};
@@ -331,8 +331,8 @@ namespace stardraw
 
     struct struct_field_location
     {
-        uint64_t offset;
-        uint64_t size;
+        u64 offset;
+        u64 size;
     };
 
     std::vector<struct_field_location> flatten_structure(slang::TypeLayoutReflection* structure)
@@ -340,13 +340,13 @@ namespace stardraw
         struct stack_frame
         {
             slang::TypeLayoutReflection* type;
-            uint64_t parent_offset;
-            uint64_t current_field_index;
+            u64 parent_offset;
+            u64 current_field_index;
         };
 
         std::vector<struct_field_location> results;
         std::stack<stack_frame> layout_stack;
-        uint64_t current_offset = 0;
+        u64 current_offset = 0;
 
         layout_stack.push({structure, 0, 0});
 
@@ -373,18 +373,18 @@ namespace stardraw
 
             if (field_type->getKind() == slang::TypeReflection::Kind::Array)
             {
-                for (int32_t idx = field_type->getElementCount() - 1; idx >= 0; idx--)
+                for (i32 idx = field_type->getElementCount() - 1; idx >= 0; idx--)
                 {
-                    const uint64_t element_offset = idx * field_type->getElementStride(SLANG_PARAMETER_CATEGORY_UNIFORM);
+                    const u64 element_offset = idx * field_type->getElementStride(SLANG_PARAMETER_CATEGORY_UNIFORM);
                     layout_stack.push({field_type->getElementTypeLayout(), current_offset + element_offset, 0});
                 }
 
                 continue;
             }
 
-            const uint64_t size = field_type->getSize();
-            const uint64_t stride = field_type->getStride();
-            const uint64_t offset = field->getOffset();
+            const u64 size = field_type->getSize();
+            const u64 stride = field_type->getStride();
+            const u64 offset = field->getOffset();
 
             if (size == 0) continue;
 
@@ -395,7 +395,7 @@ namespace stardraw
         return results;
     }
 
-    shader_parameter_location shader_parameter_location::index(const uint32_t index) const
+    shader_parameter_location shader_parameter_location::index(const u32 index) const
     {
         slang::TypeLayoutReflection* type_layout = slang_type_reflection(*this);
         slang::TypeLayoutReflection* element_layout = type_layout->getElementTypeLayout();
@@ -436,7 +436,7 @@ namespace stardraw
 
         if (is_single_element_container_kind(type_layout->getKind())) type_layout = type_layout->getElementTypeLayout();
 
-        const int32_t index = type_layout->findFieldIndexByName(name.data(), name.data() + name.size());
+        const i32 index = type_layout->findFieldIndexByName(name.data(), name.data() + name.size());
         if (index < 0) return invalid_shader_paramter_location;
 
         slang::VariableLayoutReflection* field = type_layout->getFieldByIndex(index);
@@ -455,7 +455,7 @@ namespace stardraw
 
         slang::VariableLayoutReflection* globals_as_var = slang_shader_reflection(this)->getGlobalParamsVarLayout();
         slang::TypeLayoutReflection* globals = globals_as_var->getTypeLayout();
-        const int64_t field_idx = globals->findFieldIndexByName(name.data(), name.data() + name.size());
+        const i64 field_idx = globals->findFieldIndexByName(name.data(), name.data() + name.size());
         if (field_idx < 0) return invalid_shader_paramter_location;
 
         slang::VariableLayoutReflection* root_param = globals->getFieldByIndex(field_idx);
@@ -471,10 +471,10 @@ namespace stardraw
         return result;
     }
 
-    int64_t shader_program::buffer_size(const std::string_view& name) const
+    i64 shader_program::buffer_size(const std::string_view& name) const
     {
         slang::TypeLayoutReflection* globals = slang_shader_reflection(this)->getGlobalParamsTypeLayout();
-        const int64_t global_idx = globals->findFieldIndexByName(name.data(), name.data() + name.size());
+        const i64 global_idx = globals->findFieldIndexByName(name.data(), name.data() + name.size());
         if (global_idx < 0) return -1;
 
         slang::VariableLayoutReflection* root_param = globals->getFieldByIndex(global_idx);
@@ -491,7 +491,7 @@ namespace stardraw
         shader_buffer_layout* result = new shader_buffer_layout();
 
         slang::TypeLayoutReflection* globals = shader_layout->getGlobalParamsTypeLayout();
-        const int64_t global_idx = globals->findFieldIndexByName(buffer_name.data(), buffer_name.data() + buffer_name.size());
+        const i64 global_idx = globals->findFieldIndexByName(buffer_name.data(), buffer_name.data() + buffer_name.size());
         if (global_idx < 0) return {status_type::UNKNOWN, std::format("Couldn't find buffer by name {0}", buffer_name)};
         slang::VariableLayoutReflection* root_param = globals->getFieldByIndex(global_idx);
         if (root_param == nullptr) return {status_type::UNKNOWN, std::format("Couldn't find buffer by name {0}", buffer_name)};
@@ -499,8 +499,8 @@ namespace stardraw
         slang::TypeLayoutReflection* base_layout = root_param->getTypeLayout()->getElementTypeLayout();
         result->padded_size = base_layout->getStride();
 
-        uint64_t current_offset = 0;
-        uint64_t packed_size = 0;
+        u64 current_offset = 0;
+        u64 packed_size = 0;
 
         const std::vector<struct_field_location> fields = flatten_structure(base_layout);
 

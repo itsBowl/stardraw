@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Stardraw" pattern="file[stardraw]:sources/stardraw/*||file[stardraw]:sources/stardraw-demo/*||file[stardraw]:sources/stardraw//*" />
+</component>

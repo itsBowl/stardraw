@@ -6,7 +6,7 @@
 
 namespace stardraw::gl45
 {
-    [[nodiscard]] constexpr uint32_t vertex_element_size(const vertex_data_type type)
+    [[nodiscard]] constexpr u32 vertex_element_size(const vertex_data_type type)
     {
         switch (type)
         {
@@ -15,7 +15,7 @@ namespace stardraw::gl45
             case vertex_data_type::FLOAT_U8_NORM:
             case vertex_data_type::FLOAT_I8_NORM: return 1;
 
-            case vertex_data_type::UNT2_U8:
+            case vertex_data_type::UINT2_U8:
             case vertex_data_type::UINT_U16:
             case vertex_data_type::INT2_I8:
             case vertex_data_type::INT_I16:
@@ -72,19 +72,19 @@ namespace stardraw::gl45
     #pragma pack(push, 1)
     struct draw_arrays_indirect_params
     {
-        uint32_t vertex_count;
-        uint32_t instance_count;
-        uint32_t vertex_begin;
-        uint32_t instance_begin;
+        u32 vertex_count;
+        u32 instance_count;
+        u32 vertex_begin;
+        u32 instance_begin;
     };
 
     struct draw_elements_indirect_params
     {
-        uint32_t vertex_count;
-        uint32_t instance_count;
-        uint32_t index_begin;
-        int32_t vertex_begin;
-        uint32_t instance_begin;
+        u32 vertex_count;
+        u32 instance_count;
+        u32 index_begin;
+        i32 vertex_begin;
+        u32 instance_begin;
     };
     #pragma pack(pop)
 
@@ -120,9 +120,9 @@ namespace stardraw::gl45
 
         void* transfer_buffer_ptr = nullptr;
         GLuint transfer_buffer_id = 0;
-        uint64_t transfer_buffer_address = 0;
-        uint64_t transfer_destination_address = 0;
-        uint64_t transfer_size = 0;
+        u64 transfer_buffer_address = 0;
+        u64 transfer_destination_address = 0;
+        u64 transfer_size = 0;
         GLsync* sync_ptr = nullptr;
         std::atomic<stardraw::memory_transfer_status> current_status = memory_transfer_status::READY;
     };

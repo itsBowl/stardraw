@@ -30,7 +30,7 @@ namespace stardraw::gl45
         [[nodiscard]] status delete_object(const descriptor_type type, const std::string_view& name) override;
 
         [[nodiscard]] signal_status check_signal(const std::string_view& name) override;
-        [[nodiscard]] signal_status wait_signal(const std::string_view& name, uint64_t timeout) override;
+        [[nodiscard]] signal_status wait_signal(const std::string_view& name, u64 timeout) override;
 
         [[nodiscard]] status prepare_memory_transfer(const memory_transfer_info& info, memory_transfer_handle** out_handle) override;
         [[nodiscard]] status flush_memory_transfer(memory_transfer_handle* handle) override;
@@ -116,7 +116,7 @@ namespace stardraw::gl45
 
         window* parent_window;
         std::unordered_map<std::string, command_list> command_lists;
-        std::unordered_map<descriptor_type, std::unordered_map<uint64_t, object_state*>> objects;
+        std::unordered_map<descriptor_type, std::unordered_map<u64, object_state*>> objects;
         std::unordered_map<std::string, signal_state> signals;
         std::unordered_map<memory_transfer_handle*, memory_transfer_info> memory_transfers;
         const draw_specification_state* active_draw_specification = nullptr;

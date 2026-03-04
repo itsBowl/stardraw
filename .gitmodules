@@ -1,0 +1,4 @@
+[submodule "libraries/starlib"]
+	path = libraries/starlib
+	url = https://github.com/Hyyeve/starlib
+	branch = master

@@ -6,6 +6,7 @@
 
 namespace stardraw::gl45
 {
+    using namespace starlib;
     inline GLenum gl_draw_mode(const draw_mode mode)
     {
         switch (mode)
@@ -30,7 +31,7 @@ namespace stardraw::gl45
         return -1;
     }
 
-    inline uint32_t gl_type_size(const GLenum type)
+    inline u32 gl_type_size(const GLenum type)
     {
         switch (type)
         {
@@ -118,7 +119,7 @@ namespace stardraw::gl45
         if (!active_draw_specification->has_index_buffer) return {status_type::INVALID, "The current draw specification does not have an index buffer for indexed drawing"};
 
         const GLenum index_element_type = gl_index_size(cmd->index_type);
-        const uint32_t index_element_size = gl_type_size(index_element_type);
+        const u32 index_element_size = gl_type_size(index_element_type);
 
         glDrawElementsInstancedBaseVertexBaseInstance(gl_draw_mode(cmd->mode), cmd->count, index_element_type, reinterpret_cast<const void*>(cmd->start_index * index_element_size), cmd->instances, cmd->vertex_index_offset, cmd->start_instance);
 

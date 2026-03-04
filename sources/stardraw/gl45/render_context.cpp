@@ -12,7 +12,7 @@ namespace stardraw::gl45
         switch (type)
         {
             case vertex_data_type::UINT_U8: return {GL_UNSIGNED_BYTE, 1, false, true};
-            case vertex_data_type::UNT2_U8: return {GL_UNSIGNED_BYTE, 2, false, true};
+            case vertex_data_type::UINT2_U8: return {GL_UNSIGNED_BYTE, 2, false, true};
             case vertex_data_type::UINT3_U8: return {GL_UNSIGNED_BYTE, 3, false, true};
             case vertex_data_type::UINT4_U8: return {GL_UNSIGNED_BYTE, 4, false, true};
             case vertex_data_type::UINT_U16: return {GL_UNSIGNED_SHORT, 1, false, true};
@@ -142,7 +142,7 @@ namespace stardraw::gl45
         return wait_signal(name, 0);
     }
 
-    [[nodiscard]] signal_status render_context::wait_signal(const std::string_view& name, const uint64_t timeout)
+    [[nodiscard]] signal_status render_context::wait_signal(const std::string_view& name, const u64 timeout)
     {
         const status context_status = parent_window->make_gl_context_active();
         if (is_status_error(context_status)) return signal_status::CONTEXT_ERROR;
@@ -408,7 +408,7 @@ namespace stardraw::gl45
 
         const GLuint vao_id = vertex_spec->vertex_array_id;
 
-        for (uint32_t idx = 0; idx < format.bindings.size(); idx++)
+        for (u32 idx = 0; idx < format.bindings.size(); idx++)
         {
             const vertex_data_binding& elem = format.bindings[idx];
             GLsizeiptr& offset = buffer_strides[buffer_slots[elem.buffer]];
@@ -416,7 +416,9 @@ namespace stardraw::gl45
             glEnableVertexArrayAttrib(vao_id, idx);
             glVertexArrayAttribBinding(vao_id, idx, buffer_slots[elem.buffer]);
             if (elem.instance_divisor > 0)
+            {
                 glVertexArrayBindingDivisor(vao_id, idx, elem.instance_divisor);
+            }
 
             auto [type, count, normalized, integer] = gl_vertex_element_data_type(elem.type);
 
@@ -562,7 +564,7 @@ namespace stardraw::gl45
     status render_context::bind_shader_buffer_parameter(shader_state* shader, const shader_parameter_location& location, const shader_parameter_value& value)
     {
         const binding_location_info binding_info = vk_binding_for_location(location);
-        const uint32_t actual_slot = binding_info.slot + shader->descriptor_set_binding_offsets[binding_info.set];
+        const u32 actual_slot = binding_info.slot + shader->descriptor_set_binding_offsets[binding_info.set];
         GLenum binding_type = 0;
 
         //To bind a buffer, we make sure the location is *explicitly* pointed at the buffer variable, not something contained inside the buffer.
@@ -615,7 +617,7 @@ namespace stardraw::gl45
     status render_context::bind_shader_data_parameter(shader_state* shader, const shader_parameter_location& location, shader_parameter_value& value)
     {
         const binding_location_info binding_info = vk_binding_for_location(location);
-        const uint32_t actual_slot = binding_info.slot + shader->descriptor_set_binding_offsets[binding_info.set];
+        const u32 actual_slot = binding_info.slot + shader->descriptor_set_binding_offsets[binding_info.set];
 
         if (!shader->bound_objects.contains(actual_slot))
         {

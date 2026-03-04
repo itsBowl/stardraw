@@ -3,12 +3,14 @@
 
 #include "shaders.hpp"
 #include "shader_parameter_value.hpp"
-#include "stardraw/api/polymorphic_ptr.hpp"
 #include "stardraw/api/types.hpp"
+#include "starlib/types/polymorphic_ptr.hpp"
+#include "starlib/types/sized_numerics.hpp"
 
 namespace stardraw
 {
-    enum class command_type : uint8_t
+    using namespace starlib;
+    enum class command_type : u8
     {
         DRAW, DRAW_INDIRECT, DRAW_INDEXED, DRAW_INDEXED_INDIRECT,
         CONFIG_BLENDING, CONFIG_STENCIL, CONFIG_SCISSOR, CONFIG_FACE_CULL, CONFIG_DEPTH_TEST, CONFIG_DEPTH_RANGE, CONFIG_DRAW,
@@ -26,19 +28,19 @@ namespace stardraw
 
     typedef std::vector<polymorphic_ptr<command>> command_list;
 
-    enum class draw_mode : uint8_t
+    enum class draw_mode : u8
     {
         TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN,
     };
 
-    enum class draw_indexed_index_type : uint8_t
+    enum class draw_indexed_index_type : u8
     {
         UINT_32, UINT_16, UINT_8
     };
 
     struct draw_command final : command
     {
-        draw_command(const draw_mode mode, const uint32_t count, const uint32_t start_vertex = 0, const uint32_t instances = 1, const uint32_t start_instance = 0) : mode(mode), count(count), start_vertex(start_vertex), instances(instances), start_instance(start_instance) {}
+        draw_command(const draw_mode mode, const u32 count, const u32 start_vertex = 0, const u32 instances = 1, const u32 start_instance = 0) : mode(mode), count(count), start_vertex(start_vertex), instances(instances), start_instance(start_instance) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -46,19 +48,19 @@ namespace stardraw
         }
 
         draw_mode mode;
-        uint32_t count;
+        u32 count;
 
         ///Starting index for vertices
-        uint32_t start_vertex;
+        u32 start_vertex;
 
-        uint32_t instances;
+        u32 instances;
         ///Starting index for instanced attributes
-        uint32_t start_instance = 0;
+        u32 start_instance = 0;
     };
 
     struct draw_indexed_command final : command
     {
-        draw_indexed_command(const draw_mode mode, const uint32_t count, const int32_t vertex_index_offset = 0, const uint32_t start_index = 0, const uint32_t instances = 1, const uint32_t start_instance = 0, const draw_indexed_index_type index_type = draw_indexed_index_type::UINT_32) : mode(mode), index_type(index_type), count(count), vertex_index_offset(vertex_index_offset), start_index(start_index), instances(instances), start_instance(start_instance) {}
+        draw_indexed_command(const draw_mode mode, const u32 count, const i32 vertex_index_offset = 0, const u32 start_index = 0, const u32 instances = 1, const u32 start_instance = 0, const draw_indexed_index_type index_type = draw_indexed_index_type::UINT_32) : mode(mode), index_type(index_type), count(count), vertex_index_offset(vertex_index_offset), start_index(start_index), instances(instances), start_instance(start_instance) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -67,22 +69,22 @@ namespace stardraw
 
         draw_mode mode;
         draw_indexed_index_type index_type;
-        uint32_t count;
+        u32 count;
 
         ///Offset applied to all vertex indices
-        int32_t vertex_index_offset;
+        i32 vertex_index_offset;
 
         ///Starting index for indices
-        uint32_t start_index;
+        u32 start_index;
 
-        uint32_t instances;
+        u32 instances;
         ///Starting index for instanced attributes
-        uint32_t start_instance;
+        u32 start_instance;
     };
 
     struct draw_indirect_command final : command
     {
-        draw_indirect_command(const draw_mode mode, const uint32_t draw_count, const uint32_t indirect_source_offset = 0) : mode(mode), draw_count(draw_count), indirect_offset(indirect_source_offset) {}
+        draw_indirect_command(const draw_mode mode, const u32 draw_count, const u32 indirect_source_offset = 0) : mode(mode), draw_count(draw_count), indirect_offset(indirect_source_offset) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -90,13 +92,13 @@ namespace stardraw
         }
 
         draw_mode mode;
-        uint32_t draw_count;
-        uint32_t indirect_offset;
+        u32 draw_count;
+        u32 indirect_offset;
     };
 
     struct draw_indexed_indirect_command final : command
     {
-        draw_indexed_indirect_command(const draw_mode mode, const uint32_t draw_count, const uint32_t indirect_source_offset = 0, const draw_indexed_index_type index_type = draw_indexed_index_type::UINT_32) : mode(mode), index_type(index_type), draw_count(draw_count), indirect_offset(indirect_source_offset) {}
+        draw_indexed_indirect_command(const draw_mode mode, const u32 draw_count, const u32 indirect_source_offset = 0, const draw_indexed_index_type index_type = draw_indexed_index_type::UINT_32) : mode(mode), index_type(index_type), draw_count(draw_count), indirect_offset(indirect_source_offset) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -105,8 +107,8 @@ namespace stardraw
 
         draw_mode mode;
         draw_indexed_index_type index_type;
-        uint32_t draw_count;
-        uint32_t indirect_offset;
+        u32 draw_count;
+        u32 indirect_offset;
     };
 
     struct draw_config_command final : command
@@ -120,17 +122,17 @@ namespace stardraw
         object_identifier draw_specification;
     };
 
-    enum class stencil_test_func : uint8_t
+    enum class stencil_test_func : u8
     {
         ALWAYS, NEVER, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL, EQUAL, NOT_EQUAL
     };
 
-    enum class stencil_result_op : uint8_t
+    enum class stencil_result_op : u8
     {
         KEEP, ZERO, REPLACE, INCREMENT, INCREMENT_WRAP, DECREMENT, DECREMENT_WRAP, INVERT
     };
 
-    enum class stencil_facing : uint8_t
+    enum class stencil_facing : u8
     {
         FRONT, BACK, BOTH
     };
@@ -168,12 +170,12 @@ namespace stardraw
         stencil_facing for_facing;
     };
 
-    enum class blending_func : uint8_t
+    enum class blending_func : u8
     {
         ADD, SUBTRACT, REVERSE_SUBTRACT, MIN, MAX
     };
 
-    enum class blending_factor : uint8_t
+    enum class blending_factor : u8
     {
         ZERO,
         ONE,
@@ -211,10 +213,10 @@ namespace stardraw
         blending_factor dest_blend_alpha = blending_factor::ONE_MINUS_SOURCE_ALPHA;
         blending_func alpha_equation = blending_func::ADD;
 
-        float constant_blend_r = 1.0f;
-        float constant_blend_g = 1.0f;
-        float constant_blend_b = 1.0f;
-        float constant_blend_a = 1.0f;
+        f32 constant_blend_r = 1.0f;
+        f32 constant_blend_g = 1.0f;
+        f32 constant_blend_b = 1.0f;
+        f32 constant_blend_a = 1.0f;
 
         bool enabled = true;
     };
@@ -233,7 +235,7 @@ namespace stardraw
 
     struct blending_config_command final : command
     {
-        explicit blending_config_command(const blending_config& config, const uint32_t draw_buffer_index = 0) : config(config), draw_buffer_index(draw_buffer_index) {}
+        explicit blending_config_command(const blending_config& config, const u32 draw_buffer_index = 0) : config(config), draw_buffer_index(draw_buffer_index) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -241,10 +243,10 @@ namespace stardraw
         }
 
         blending_config config;
-        uint32_t draw_buffer_index;
+        u32 draw_buffer_index;
     };
 
-    enum class depth_test_func : uint8_t
+    enum class depth_test_func : u8
     {
         ALWAYS, NEVER, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL, EQUAL, NOT_EQUAL
     };
@@ -278,16 +280,16 @@ namespace stardraw
 
     struct depth_range_config_command final : command
     {
-        explicit depth_range_config_command(const double near, const double far, const uint32_t viewport_index = 0) : near(near), far(far), viewport_index(viewport_index) {}
+        explicit depth_range_config_command(const f64 near, const f64 far, const u32 viewport_index = 0) : near(near), far(far), viewport_index(viewport_index) {}
 
         [[nodiscard]] command_type type() const override
         {
             return command_type::CONFIG_DEPTH_RANGE;
         }
 
-        double near;
-        double far;
-        uint32_t viewport_index;
+        f64 near;
+        f64 far;
+        u32 viewport_index;
     };
 
     enum face_cull_mode
@@ -309,11 +311,11 @@ namespace stardraw
 
     struct scissor_test_config
     {
-        int32_t left = std::numeric_limits<int32_t>::min();
-        int32_t bottom = std::numeric_limits<int32_t>::min();
+        i32 left = std::numeric_limits<i32>::min();
+        i32 bottom = std::numeric_limits<i32>::min();
 
-        int32_t width = std::numeric_limits<int32_t>::max();
-        int32_t height = std::numeric_limits<int32_t>::max();
+        i32 width = std::numeric_limits<i32>::max();
+        i32 height = std::numeric_limits<i32>::max();
 
         bool enabled = true;
     };
@@ -325,7 +327,7 @@ namespace stardraw
 
     struct scissor_config_command final : command
     {
-        explicit scissor_config_command(const scissor_test_config& config, const uint32_t viewport_index = 0) : config(config), viewport_index(viewport_index) {}
+        explicit scissor_config_command(const scissor_test_config& config, const u32 viewport_index = 0) : config(config), viewport_index(viewport_index) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -333,12 +335,12 @@ namespace stardraw
         }
 
         scissor_test_config config;
-        uint32_t viewport_index;
+        u32 viewport_index;
     };
 
     struct buffer_copy_command final : command
     {
-        explicit buffer_copy_command(const std::string_view& source_buffer, const std::string_view& dest_buffer, const uint64_t from_address, const uint64_t to_address, const uint64_t bytes) : source_buffer(source_buffer), dest_buffer(dest_buffer), source_address(from_address), dest_address(to_address), bytes(bytes) {}
+        explicit buffer_copy_command(const std::string_view& source_buffer, const std::string_view& dest_buffer, const u64 from_address, const u64 to_address, const u64 bytes) : source_buffer(source_buffer), dest_buffer(dest_buffer), source_address(from_address), dest_address(to_address), bytes(bytes) {}
 
         [[nodiscard]] command_type type() const override
         {
@@ -347,9 +349,9 @@ namespace stardraw
 
         object_identifier source_buffer;
         object_identifier dest_buffer;
-        uint64_t source_address;
-        uint64_t dest_address;
-        uint64_t bytes;
+        u64 source_address;
+        u64 dest_address;
+        u64 bytes;
     };
 
     enum class clear_window_mode
@@ -361,14 +363,14 @@ namespace stardraw
 
     struct clear_values_config
     {
-        float color_r = 0.0f;
-        float color_g = 0.0f;
-        float color_b = 0.0f;
-        float color_a = 1.0f;
+        f32 color_r = 0.0f;
+        f32 color_g = 0.0f;
+        f32 color_b = 0.0f;
+        f32 color_a = 1.0f;
 
-        double depth = 1.0f;
+        f64 depth = 1.0f;
 
-        int32_t stencil = 0;
+        i32 stencil = 0;
     };
 
     namespace clear_values_configs

@@ -141,10 +141,10 @@ namespace stardraw::gl45
         gl_texture_target = texture_type_to_gl_target(desc.format.shape, has_msaa, is_array);
         gl_texture_format = texture_data_type_to_gl_format(desc.format.data_type);
 
-        const uint32_t width = desc.format.width;
-        const uint32_t height = desc.format.height;
-        const uint32_t depth = desc.format.depth;
-        const uint8_t multisample_count = static_cast<uint8_t>(desc.format.msaa);
+        const u32 width = desc.format.width;
+        const u32 height = desc.format.height;
+        const u32 depth = desc.format.depth;
+        const u8 multisample_count = static_cast<u8>(desc.format.msaa);
 
         if (num_texture_mipmap_levels <= 0)
         {
@@ -316,7 +316,7 @@ namespace stardraw::gl45
 
     GLenum gl_filter_mode_from_modes(const texture_filtering_mode filter, const texture_filtering_mode mipmap_selection)
     {
-        const uint8_t option = static_cast<uint8_t>(filter) + static_cast<uint8_t>(mipmap_selection) * 2;
+        const u8 option = static_cast<u8>(filter) + static_cast<u8>(mipmap_selection) * 2;
         switch (option)
         {
             case 0: return GL_NEAREST_MIPMAP_NEAREST; //Nearest nearest
@@ -451,11 +451,11 @@ namespace stardraw::gl45
 
     status texture_state::is_view_compatible(const texture_descriptor& view_descriptor) const
     {
-        const uint32_t min_view_mipmap = view_descriptor.format.view_texture_base_mipmap;
-        const uint32_t max_view_mipmap = min_view_mipmap + view_descriptor.format.mipmap_levels - 1;
+        const u32 min_view_mipmap = view_descriptor.format.view_texture_base_mipmap;
+        const u32 max_view_mipmap = min_view_mipmap + view_descriptor.format.mipmap_levels - 1;
 
-        const uint32_t min_view_layer = view_descriptor.format.view_texture_base_array_index;
-        const uint32_t max_view_layer = min_view_mipmap + view_descriptor.format.texture_layers - 1;
+        const u32 min_view_layer = view_descriptor.format.view_texture_base_array_index;
+        const u32 max_view_layer = min_view_mipmap + view_descriptor.format.texture_layers - 1;
 
         const bool is_array = (view_descriptor.format.shape != texture_shape::CUBE_MAP && view_descriptor.format.texture_layers > 1) || view_descriptor.format.texture_layers > 6;
 

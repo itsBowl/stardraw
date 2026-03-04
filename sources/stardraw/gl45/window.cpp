@@ -52,6 +52,8 @@ namespace stardraw::gl45
             return {status_type::BACKEND_ERROR, "Couldn't initialize GLAD"};
         }
 
+        TracyGpuContext; //init tracy context
+
         win->context = std::make_unique<render_context>(win);
 
         *out_window = win;
@@ -80,7 +82,6 @@ namespace stardraw::gl45
     status window::make_gl_context_active()
     {
         ZoneScoped;
-        TracyGpuZone("[Stardraw] Make opengl context active")
         glfwMakeContextCurrent(handle);
         return status_from_last_glfw_error();
     }
@@ -95,7 +96,7 @@ namespace stardraw::gl45
         glfwDestroyWindow(handle);
     }
 
-    void window::on_framebuffer_resize(const uint32_t width, const uint32_t height)
+    void window::on_framebuffer_resize(const u32 width, const u32 height)
     {
         const status context_status = make_gl_context_active();
         if (is_status_error(context_status)) return;

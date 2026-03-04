@@ -41,14 +41,14 @@ std::vector<shader_stage> load_shader()
 
 struct vertex
 {
-    float position[3];
-    float color[4];
+    f32 position[3];
+    f32 color[4];
 };
 
 struct uniform_block
 {
-    float tint[4];
-    float additive[3];
+    f32 tint[4];
+    f32 additive[3];
 };
 
 std::array triangle = {
@@ -71,7 +71,7 @@ int main()
 
     const std::vector<shader_stage> shader_stages = load_shader();
 
-    const uint32_t param_buffer_size = frag_shader->buffer_size("structured");
+    const u32 param_buffer_size = frag_shader->buffer_size("structured");
 
     status object_state_status = ctx->create_objects({
             buffer_descriptor("vertices", 300),

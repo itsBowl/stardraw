@@ -7,6 +7,8 @@ find_package(glfw3 3.3 REQUIRED)
 find_package(spirv_cross_core REQUIRED)
 find_package(spirv_cross_glsl REQUIRED)
 
+add_subdirectory(libraries/starlib)
+
 include(FetchContent)
 
 FetchContent_Declare(

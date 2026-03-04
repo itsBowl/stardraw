@@ -1,9 +1,11 @@
 #pragma once
 #include <vector>
 #include "types.hpp"
+#include "starlib/types/sized_numerics.hpp"
 
 namespace stardraw
 {
+    using namespace starlib;
     enum class shader_stage_type
     {
         VERTEX, TESSELATION_CONTROL, TESSELATION_EVAL, GEOMETRY, FRAGMENT, COMPUTE
@@ -14,27 +16,27 @@ namespace stardraw
     {
         struct pad
         {
-            uint64_t address;
-            uint64_t size;
+            u64 address;
+            u64 size;
         };
 
-        uint64_t packed_size = 0;
-        uint64_t padded_size = 0;
+        u64 packed_size = 0;
+        u64 padded_size = 0;
         std::vector<pad> pads;
     };
 
     struct shader_parameter_location
     {
-        [[nodiscard]] shader_parameter_location index(uint32_t index) const;
+        [[nodiscard]] shader_parameter_location index(u32 index) const;
         [[nodiscard]] shader_parameter_location field(const std::string_view& name) const;
         [[nodiscard]] bool operator==(const shader_parameter_location& other) const = default;
 
         void* root_ptr = nullptr;
         void* offset_ptr = nullptr;
-        uint32_t root_idx = 0;
-        uint32_t byte_address = 0;
-        uint32_t binding_range = 0;
-        uint32_t binding_range_index = 0;
+        u32 root_idx = 0;
+        u32 byte_address = 0;
+        u32 binding_range = 0;
+        u32 binding_range_index = 0;
     };
 
     struct shader_program
@@ -42,10 +44,10 @@ namespace stardraw
         [[nodiscard]] shader_parameter_location locate(const std::string_view& name) const;
 
         //Number of bytes required to store all variables of a shader buffer. -1 indicates an unknown or unsized buffer.
-        [[nodiscard]] int64_t buffer_size(const std::string_view& name) const;
+        [[nodiscard]] i64 buffer_size(const std::string_view& name) const;
 
         void* data;
-        uint32_t data_size;
+        u32 data_size;
         void* internal_ptr;
         graphics_api api;
     };
@@ -71,8 +73,8 @@ namespace stardraw
 
     [[nodiscard]] status setup_shader_compiler(const std::vector<shader_macro>& macro_defines = {});
     [[nodiscard]] status load_shader_module(const std::string_view& module_name, const std::string_view& source);
-    [[nodiscard]] status load_shader_module(const std::string_view& module_name, const void* cache_ptr, const uint64_t cache_size);
-    [[nodiscard]] status cache_shader_module(const std::string& module_name, void** out_cache_ptr, uint64_t& out_cache_size);
+    [[nodiscard]] status load_shader_module(const std::string_view& module_name, const void* cache_ptr, const u64 cache_size);
+    [[nodiscard]] status cache_shader_module(const std::string& module_name, void** out_cache_ptr, u64& out_cache_size);
     [[nodiscard]] status link_shader_modules(const std::string& linked_set_name, const std::vector<shader_entry_point>& entry_points, const std::vector<std::string>& additional_modules = {});
 
     [[nodiscard]] status create_shader_program(const std::string& linked_set_name, const shader_entry_point& entry_point, const graphics_api& api, shader_program** out_shader_program);
@@ -87,5 +89,5 @@ namespace stardraw
     Only 32 bit integer types, 32 bit floating point types, and composite types made of those are guarenteed to be supported.
     Support for other types is dependent on the api, and attempting to use types an API does not support is undefined behaviour.
     */
-    [[nodiscard]] void* layout_shader_buffer_memory(const shader_buffer_layout* layout, const void* data, const uint64_t data_size);
+    [[nodiscard]] void* layout_shader_buffer_memory(const shader_buffer_layout* layout, const void* data, const u64 data_size);
 }

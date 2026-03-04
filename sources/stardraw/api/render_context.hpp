@@ -8,6 +8,7 @@
 
 namespace stardraw
 {
+    using namespace starlib;
     class render_context;
     class async_upload_handle;
 
@@ -42,6 +43,6 @@ namespace stardraw
         }
 
         [[nodiscard]] virtual signal_status check_signal(const std::string_view& name) = 0;
-        [[nodiscard]] virtual signal_status wait_signal(const std::string_view& name, const uint64_t timeout_nanos) = 0;
+        [[nodiscard]] virtual signal_status wait_signal(const std::string_view& name, const u64 timeout_nanos) = 0;
     };
 }

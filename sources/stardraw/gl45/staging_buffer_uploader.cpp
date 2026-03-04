@@ -8,14 +8,14 @@
 #include <tracy/TracyOpenGL.hpp>
 
 #include "gl_headers.hpp"
-#include "stardraw/internal/simple_block_allocator.hpp"
+#include "../../../libraries/starlib/sources/starlib/types/simple_block_allocator.hpp"
 
 namespace stardraw::gl45
 {
-    status staging_buffer_uploader::allocate_upload(const uint64_t address, const uint64_t bytes, const uint64_t max_staging_buffer_size, gl_memory_transfer_handle** out_handle)
+    status staging_buffer_uploader::allocate_upload(const u64 address, const u64 bytes, const u64 max_staging_buffer_size, gl_memory_transfer_handle** out_handle)
     {
         clean_chunks();
-        uint64_t chunk_address;
+        u64 chunk_address;
         bool has_space = chunk_allocator.try_allocate(bytes, chunk_address);
         if (!has_space)
         {
@@ -79,7 +79,7 @@ namespace stardraw::gl45
         });
     }
 
-    status staging_buffer_uploader::allocate_new_staging_buffer(const uint64_t size)
+    status staging_buffer_uploader::allocate_new_staging_buffer(const u64 size)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Allocate staging buffer");

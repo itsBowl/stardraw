@@ -4,6 +4,7 @@
 #include "stardraw/api/commands.hpp"
 namespace stardraw::gl45
 {
+    using namespace starlib;
     class texture_state final : public object_state
     {
     public:
@@ -22,8 +23,8 @@ namespace stardraw::gl45
 
     private:
         GLuint texture_id = 0;
-        uint32_t num_texture_mipmap_levels;
-        uint32_t num_texture_array_layers;
+        u32 num_texture_mipmap_levels;
+        u32 num_texture_array_layers;
         GLenum gl_texture_format;
         GLenum gl_texture_target;
     };

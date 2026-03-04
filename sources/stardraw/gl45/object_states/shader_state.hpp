@@ -9,6 +9,7 @@
 
 namespace stardraw::gl45
 {
+    using namespace starlib;
     class shader_state final : public object_state
     {
     public:
@@ -28,9 +29,9 @@ namespace stardraw::gl45
         void clear_parameters();
         [[nodiscard]] descriptor_type object_type() const override;
 
-        std::vector<uint32_t> descriptor_set_binding_offsets;
+        std::vector<u32> descriptor_set_binding_offsets;
         std::vector<shader_parameter> parameter_store;
-        std::unordered_map<uint32_t, std::string> bound_objects;
+        std::unordered_map<u32, std::string> bound_objects;
     private:
         [[nodiscard]] status create_from_stages(const std::vector<shader_stage>& stages);
 

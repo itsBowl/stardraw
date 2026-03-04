@@ -8,6 +8,7 @@
 
 namespace stardraw::gl45
 {
+    using namespace starlib;
     shader_state::shader_state(const shader_descriptor& desc, status& out_status)
     {
         ZoneScoped;
@@ -64,7 +65,7 @@ namespace stardraw::gl45
 
         status stages_compile_status = status_type::SUCCESS;
         std::vector<GLuint> shader_stages;
-        for (uint32_t idx = 0; idx < stages.size(); idx++)
+        for (u32 idx = 0; idx < stages.size(); idx++)
         {
             const shader_stage& stage = stages[idx];
 
@@ -147,10 +148,10 @@ namespace stardraw::gl45
         {
             for (const shader_stage& stage : stages)
             {
-                stage_compilers.push_back(new stage_compiler {spirv_cross::CompilerGLSL(static_cast<const uint32_t*>(stage.program->data), stage.program->data_size / sizeof(uint32_t)), {}});
+                stage_compilers.push_back(new stage_compiler {spirv_cross::CompilerGLSL(static_cast<const u32*>(stage.program->data), stage.program->data_size / sizeof(u32)), {}});
             }
 
-            std::vector<uint32_t> bindings_per_set;
+            std::vector<u32> bindings_per_set;
 
             for (stage_compiler* stage : stage_compilers)
             {
@@ -166,8 +167,8 @@ namespace stardraw::gl45
 
                 for (const spirv_cross::Resource& resource : stage->resources_with_binding_sets)
                 {
-                    const uint32_t descriptor_set = stage->compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-                    const uint32_t binding_index = stage->compiler.get_decoration(resource.id, spv::DecorationBinding);
+                    const u32 descriptor_set = stage->compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+                    const u32 binding_index = stage->compiler.get_decoration(resource.id, spv::DecorationBinding);
                     if (descriptor_set >= bindings_per_set.size()) bindings_per_set.resize(descriptor_set + 1);
                     bindings_per_set[descriptor_set] = std::max(bindings_per_set[descriptor_set], binding_index + 1);
                 }
@@ -175,8 +176,8 @@ namespace stardraw::gl45
 
             descriptor_set_binding_offsets.resize(bindings_per_set.size());
 
-            uint32_t binding_offset = 0;
-            for (uint32_t idx = 0; idx < bindings_per_set.size(); idx++)
+            u32 binding_offset = 0;
+            for (u32 idx = 0; idx < bindings_per_set.size(); idx++)
             {
                 descriptor_set_binding_offsets[idx] = binding_offset;
                 binding_offset += bindings_per_set[idx];
@@ -186,8 +187,8 @@ namespace stardraw::gl45
             {
                 for (const spirv_cross::Resource& resource : stage->resources_with_binding_sets)
                 {
-                    const uint32_t descriptor_set = stage->compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-                    const uint32_t binding_index = stage->compiler.get_decoration(resource.id, spv::DecorationBinding);
+                    const u32 descriptor_set = stage->compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+                    const u32 binding_index = stage->compiler.get_decoration(resource.id, spv::DecorationBinding);
                     stage->compiler.unset_decoration(resource.id, spv::DecorationDescriptorSet);
                     stage->compiler.set_decoration(resource.id, spv::DecorationBinding, binding_index + descriptor_set_binding_offsets[descriptor_set]);
                 }
@@ -197,7 +198,7 @@ namespace stardraw::gl45
                 for (const spirv_cross::CombinedImageSampler& combined : stage->compiler.get_combined_image_samplers())
                 {
                     const std::string tex_name = stage->compiler.get_name(combined.image_id);
-                    const uint32_t binding = stage->compiler.get_decoration(combined.image_id, spv::Decoration::DecorationBinding);
+                    const u32 binding = stage->compiler.get_decoration(combined.image_id, spv::Decoration::DecorationBinding);
                     stage->compiler.set_decoration(combined.combined_id, spv::Decoration::DecorationBinding, binding);
                     stage->compiler.set_name(combined.combined_id, tex_name);
                 }
@@ -295,7 +296,7 @@ namespace stardraw::gl45
 
     std::string shader_state::get_shader_log(const GLuint shader)
     {
-        int32_t log_length = 0;
+        i32 log_length = 0;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
 
         std::string log;
@@ -309,7 +310,7 @@ namespace stardraw::gl45
 
     std::string shader_state::get_program_log(const GLuint program)
     {
-        int32_t log_length = 0;
+        i32 log_length = 0;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
 
         std::string log;
