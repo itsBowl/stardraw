@@ -561,7 +561,12 @@ namespace stardraw::gl45
                 }
                 case shader_parameter_value::value_type::TEXTURE_REFERENCE:
                 {
-                    result_status = bind_shader_texture_parameter(shader, location, value);
+                    result_status = bind_shader_texture_parameter(shader, location, value, false);
+                    break;
+                }
+                case shader_parameter_value::value_type::IMAGE_REFERENCE:
+                {
+                    result_status = bind_shader_texture_parameter(shader, location, value, true);
                     break;
                 }
                 default:
@@ -577,7 +582,7 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status render_context::bind_shader_texture_parameter(shader_state* shader, const shader_parameter_location& location, const shader_parameter_value& value)
+    status render_context::bind_shader_texture_parameter(shader_state* shader, const shader_parameter_location& location, const shader_parameter_value& value, const bool as_image = false)
     {
         const binding_location_info binding_info = vk_binding_for_location(location);
         const u32 actual_slot = binding_info.slot + shader->descriptor_set_binding_offsets[binding_info.set];
@@ -639,7 +644,20 @@ namespace stardraw::gl45
         if (!texture->is_valid()) return {status_type::INVALID, std::format("Texture object '{0}' is in an invalid state (referenced by shader parameter)", value.opaque_reference)};
         if (texture->get_shape() != resource_shape) return {status_type::INVALID, std::format("Texture object '{0}' can't be bound to this location - wrong texture shape!", value.opaque_reference)};
 
-        status bind_status = texture->bind_to_texture_slot(actual_slot);
+        status bind_status = status_type::SUCCESS;
+        if (as_image)
+        {
+            const SlangResourceAccess access = binding_info.binding_type->getResourceAccess();
+            if (access == SlangResourceAccess::SLANG_RESOURCE_ACCESS_READ && value.image_access == shader_parameter_value::image_texture_access::WRITE_ONLY) return {status_type::INVALID, std::format("Can't bind texture object '{0}' as image texture - binding location has readonly access, but parameter access is writeonly", value.opaque_reference)};
+            if (access == SlangResourceAccess::SLANG_RESOURCE_ACCESS_WRITE && value.image_access == shader_parameter_value::image_texture_access::READ_ONLY) return {status_type::INVALID, std::format("Can't bind texture object '{0}' as image texture - binding location has writeonly access, but parameter access is readonly", value.opaque_reference)};
+            if (access == SlangResourceAccess::SLANG_RESOURCE_ACCESS_READ_WRITE && value.image_access != shader_parameter_value::image_texture_access::READ_WRITE) return {status_type::INVALID, std::format("Can't bind texture object '{0}' as image texture - binding location has readwrite access, but parameter access is not readwrite", value.opaque_reference)};
+            bind_status = texture->bind_to_image_slot(actual_slot, value.image_texture_mipmap, value.image_texture_layer, value.image_texture_array, value.image_access);
+        }
+        else
+        {
+            bind_status = texture->bind_to_texture_slot(actual_slot);
+        }
+
         if (is_status_error(bind_status)) return bind_status;
         shader->bound_objects[actual_slot] = value.opaque_reference;
         return status_type::SUCCESS;

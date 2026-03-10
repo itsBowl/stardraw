@@ -658,12 +658,23 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status texture_state::bind_to_image_slot(const u32 slot, const u32 mipmap_level, const bool as_array, const u32 array_layer) const
+    GLenum gl_image_texture_access(const shader_parameter_value::image_texture_access& access)
+    {
+        switch (access)
+        {
+            case shader_parameter_value::image_texture_access::READ_ONLY: return GL_READ_ONLY;
+            case shader_parameter_value::image_texture_access::WRITE_ONLY: return GL_WRITE_ONLY;
+            case shader_parameter_value::image_texture_access::READ_WRITE: return GL_READ_WRITE;
+            default: return -1;
+        }
+    }
+
+    status texture_state::bind_to_image_slot(const u32 slot, const u32 mipmap_level, const u32 array_layer, const bool entire_array, const shader_parameter_value::image_texture_access access) const
     {
         if (mipmap_level >= num_texture_mipmap_levels) return {status_type::INVALID, "Texture does not contain specified mipmap level for image binding"};
         if (array_layer >= num_texture_array_layers) return {status_type::INVALID, "Texture does not contain specified array layer for image binding"};
-        //glBindImageTexture(slot, gl_texture_id, mipmap_level, as_array, array_layer, access, gl_texture_format);
-        return status_type::UNSUPPORTED;
+        glBindImageTexture(slot, gl_texture_id, mipmap_level, entire_array, array_layer, gl_image_texture_access(access), gl_texture_format);
+        return status_type::SUCCESS;
     }
 
     bool texture_state::is_view_format_compatible(const GLenum source_format, const GLenum view_format)

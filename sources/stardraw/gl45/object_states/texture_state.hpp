@@ -24,7 +24,7 @@ namespace stardraw::gl45
 
         [[nodiscard]] bool is_valid() const;
         [[nodiscard]] status bind_to_texture_slot(u32 slot) const;
-        [[nodiscard]] status bind_to_image_slot(u32 slot, u32 mipmap_level, bool as_array, u32 array_layer) const;
+        [[nodiscard]] status bind_to_image_slot(u32 slot, u32 mipmap_level, u32 array_layer, bool entire_array, shader_parameter_value::image_texture_access access) const;
         [[nodiscard]] static bool is_view_format_compatible(GLenum source_format, GLenum view_format);
         [[nodiscard]] static bool is_view_target_compatible(GLenum source_target, GLenum view_target);
         [[nodiscard]] status is_view_compatible(const texture_descriptor& view_descriptor) const;

@@ -144,6 +144,11 @@ namespace stardraw::gl45
         std::vector<stage_compiler*> stage_compilers;
         status result_status = status_type::SUCCESS;
 
+        constexpr spirv_cross::CompilerGLSL::Options options = spirv_cross::CompilerGLSL::Options {
+            .version = 450,
+            .enable_storage_image_qualifier_deduction = false,
+        };
+
         try
         {
             for (const shader_stage& stage : stages)
@@ -155,6 +160,8 @@ namespace stardraw::gl45
 
             for (stage_compiler* stage : stage_compilers)
             {
+                stage->compiler.set_common_options(options);
+
                 spirv_cross::ShaderResources resources = stage->compiler.get_shader_resources();
 
                 stage->resources_with_binding_sets.append_range(resources.sampled_images);

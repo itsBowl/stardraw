@@ -118,7 +118,7 @@ int main()
             {
                 {frag_shader->locate("structured"), shader_parameter_value::buffer("param-buffer")},
                 {frag_shader->locate("structured").index(1), shader_parameter_value::vector(1.0f, 0.0f, 1.0f, 1.0f)},
-                {frag_shader->locate("texture"), shader_parameter_value::texture("tex")}
+                {frag_shader->locate("texture"), shader_parameter_value::image_read_write("tex")}
             }),
         draw_config_command("draw-spec"),
     });

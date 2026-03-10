@@ -28,7 +28,9 @@ struct FragmentOut
 };
 
 StructuredBuffer<UniformData> structured;
-Sampler2D texture;
+
+[vk::image_format("rgba8")]
+RWTexture2D<float4> texture;
 
 [shader("vertex")]
 VertexOut vertexMain(VertexIn data)
@@ -48,6 +50,10 @@ VertexOut vertexMain(VertexIn data)
 FragmentOut fragmentMain(FragmentIn data : FragmentIn) : SV_Target
 {
     FragmentOut output;
-    output.color = data.color * structured[1].tint * texture.Sample(data.uv);
+    uint2 dimensions;
+    texture.GetDimensions(dimensions.x, dimensions.y);
+    uint2 coord = uint2(data.uv * dimensions);
+    output.color = data.color * structured[1].tint * texture.Load(coord);
+    texture.Store(coord, output.color);
     return output;
 };
