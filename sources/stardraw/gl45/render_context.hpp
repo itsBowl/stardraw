@@ -32,8 +32,11 @@ namespace stardraw::gl45
         [[nodiscard]] signal_status check_signal(const std::string_view& name) override;
         [[nodiscard]] signal_status wait_signal(const std::string_view& name, u64 timeout) override;
 
-        [[nodiscard]] status prepare_memory_transfer(const memory_transfer_info& info, memory_transfer_handle** out_handle) override;
-        [[nodiscard]] status flush_memory_transfer(memory_transfer_handle* handle) override;
+        [[nodiscard]] status prepare_buffer_memory_transfer(const buffer_memory_transfer_info& info, memory_transfer_handle** out_handle) override;
+        [[nodiscard]] status flush_buffer_memory_transfer(memory_transfer_handle* handle) override;
+
+        [[nodiscard]] status prepare_texture_memory_transfer(const texture_memory_transfer_info& info, memory_transfer_handle** out_handle) override;
+        [[nodiscard]] status flush_texture_memory_transfer(memory_transfer_handle* handle) override;
     private:
         [[nodiscard]] static status status_from_last_gl_error();
 
@@ -67,6 +70,7 @@ namespace stardraw::gl45
         [[nodiscard]] status bind_draw_specification_state(const object_identifier& source);
         [[nodiscard]] status bind_buffer(const object_identifier& source, GLenum target);
         [[nodiscard]] status bind_shader(const object_identifier& source);
+        [[nodiscard]] status bind_shader_texture_parameter(shader_state* shader, const shader_parameter_location& location, const shader_parameter_value& value);
         [[nodiscard]] status bind_shader_buffer_parameter(shader_state* shader, const shader_parameter_location& location, const shader_parameter_value& value);
         [[nodiscard]] status bind_shader_data_parameter(shader_state* shader, const shader_parameter_location& location, shader_parameter_value& value);
 
@@ -118,8 +122,8 @@ namespace stardraw::gl45
         std::unordered_map<std::string, command_list> command_lists;
         std::unordered_map<descriptor_type, std::unordered_map<u64, object_state*>> objects;
         std::unordered_map<std::string, signal_state> signals;
-        std::unordered_map<memory_transfer_handle*, memory_transfer_info> memory_transfers;
+        std::unordered_map<memory_transfer_handle*, buffer_memory_transfer_info> buffer_transfers;
+        std::unordered_map<memory_transfer_handle*, texture_memory_transfer_info> texture_transfers;
         const draw_specification_state* active_draw_specification = nullptr;
     };
 }
-

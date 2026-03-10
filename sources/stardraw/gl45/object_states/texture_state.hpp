@@ -1,10 +1,14 @@
 #pragma once
+
 #include "../gl_headers.hpp"
 #include "../types.hpp"
 #include "stardraw/api/commands.hpp"
+#include "starlib/math/glm.hpp"
+
 namespace stardraw::gl45
 {
     using namespace starlib_stdint;
+
     class texture_state final : public object_state
     {
     public:
@@ -12,20 +16,41 @@ namespace stardraw::gl45
         explicit texture_state(const texture_state* original, const texture_descriptor& desc, status& out_status);
         ~texture_state() override;
 
+        [[nodiscard]] status unpack_pixels(const u32 mipmap_level, const u32 x, const u32 y, const u32 z, const u32 width, const u32 height, const u32 depth, const GLenum format, const GLenum gl_data_type) const;
+        [[nodiscard]] status copy_pixels(const texture_state* read_texture, const texture_copy_info& copy_info) const;
+
+        [[nodiscard]] status prepare_upload(const texture_memory_transfer_info& info, memory_transfer_handle** out_handle) const;
+        [[nodiscard]] status flush_upload(const texture_memory_transfer_info& info, memory_transfer_handle* handle) const;
+
         [[nodiscard]] bool is_valid() const;
+        [[nodiscard]] status bind_to_texture_slot(u32 slot) const;
+        [[nodiscard]] status bind_to_image_slot(u32 slot, u32 mipmap_level, bool as_array, u32 array_layer) const;
+        [[nodiscard]] static bool is_view_format_compatible(GLenum source_format, GLenum view_format);
+        [[nodiscard]] static bool is_view_target_compatible(GLenum source_target, GLenum view_target);
         [[nodiscard]] status is_view_compatible(const texture_descriptor& view_descriptor) const;
         [[nodiscard]] status set_sampling_config(const texture_sampling_conifg& config) const;
 
+        [[nodiscard]] texture_shape get_shape() const;
         [[nodiscard]] descriptor_type object_type() const override
         {
             return descriptor_type::TEXTURE;
         }
 
     private:
-        GLuint texture_id = 0;
+        u64 compute_bytes_in_transfer(const texture_memory_transfer_info& info) const;
+        status initalize_and_validate_texture_descriptor(const texture_descriptor& desc);
+
+        GLuint gl_texture_id = 0;
+        GLenum gl_texture_target;
+        GLenum gl_texture_format;
+
+        glm::vec<3, u32> size;
         u32 num_texture_mipmap_levels;
         u32 num_texture_array_layers;
-        GLenum gl_texture_format;
-        GLenum gl_texture_target;
+        u32 num_texture_msaa_samples;
+        u32 bytes_per_pixel;
+
+        texture_shape shape;
+        texture_data_type data_type;
     };
 }

@@ -175,55 +175,55 @@ namespace stardraw
     struct texture_format
     {
         texture_data_type data_type;
-        texture_shape shape;
-        texture_msaa_level msaa;
+        texture_shape shape = texture_shape::_1D;
+        texture_msaa_level msaa = texture_msaa_level::NONE;
+
+        u32 width = 1;
+        u32 height = 1;
+        u32 depth = 1;
+        //Number of texture layers. Must be a multiple of 6 for cubemaps, and at least 1 for all other texture types. >1 creates a layered (array) texture.
+        u32 layers = 1;
 
         //Number of mipmaps to allocate *including* the base (level 0) level. Must be >0
         u8 mipmap_levels = 1;
-        u32 width;
-        u32 height;
-        u32 depth = 0;
-
-        //Number of texture layers. Must be a multiple of 6 for cubemaps, and at least 1 for all other texture types. >1 creates an array texture.
-        u32 texture_layers = 1;
 
         //Exclusive to view textures:
         u8 view_texture_base_mipmap = 0;
-        u8 view_texture_base_array_index = 0;
+        u8 view_texture_base_layer = 0;
 
-        inline static texture_format create_1d(const u32 width, const texture_data_type = texture_data_type::RGBA_8, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
+        inline static texture_format create_1d(const u32 width, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
-            return {data_type, texture_shape::_1D, texture_msaa_level::NONE, mipmap_levels, width, 0, 0, 1, 0};
+            return {.data_type = data_type, .width = width, .mipmap_levels = mipmap_levels};
         }
 
-        inline static texture_format create_1d_array(const u32 width, const u32 array_size, const texture_data_type = texture_data_type::RGBA_8, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
+        inline static texture_format create_1d_layered(const u32 width, const u32 layers, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
-            return {data_type, texture_shape::_1D, texture_msaa_level::NONE, mipmap_levels, width, 0, 0, array_size, 0};
+            return {.data_type = data_type, .width = width, .layers = layers, .mipmap_levels = mipmap_levels};
         }
 
         inline static texture_format create_2d(const u32 width, const u32 height, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
         {
-            return {data_type, texture_shape::_2D, msaa, mipmap_levels, width, height, 0, 1, 0};
+            return {.data_type = data_type, .shape = texture_shape::_2D, .msaa = msaa, .width = width, .height = height, .mipmap_levels = mipmap_levels};
         }
 
-        inline static texture_format create_2d_array(const u32 width, const u32 height, const u32 array_size, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
+        inline static texture_format create_2d_layered(const u32 width, const u32 height, const u32 array_size, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
         {
-            return {data_type, texture_shape::_2D, msaa, mipmap_levels, width, height, 0, array_size, 0};
+            return {.data_type = data_type, .shape = texture_shape::_2D, .msaa = msaa, .width = width, .height = height, .layers = array_size, .mipmap_levels = mipmap_levels};
         }
 
         inline static texture_format create_3d(const u32 width, const u32 height, const u32 depth, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1, const texture_msaa_level msaa = texture_msaa_level::NONE)
         {
-            return {data_type, texture_shape::_3D, msaa, mipmap_levels, width, height, depth, 1, 0};
+            return {.data_type = data_type, .shape = texture_shape::_3D, .msaa = msaa, .width = width, .height = height, .depth = depth, .mipmap_levels = mipmap_levels};
         }
 
         inline static texture_format create_cube(const u32 width, const u32 height, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
-            return {data_type, texture_shape::CUBE_MAP, texture_msaa_level::NONE, mipmap_levels, width, height, 0, 6, 0};
+            return {.data_type = data_type, .shape = texture_shape::CUBE_MAP, .width = width, .height = height, .layers = 6, .mipmap_levels = mipmap_levels};
         }
 
-        inline static texture_format create_cube_array(const u32 width, const u32 height, const u32 num_cubemaps, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
+        inline static texture_format create_cube_layered(const u32 width, const u32 height, const u32 num_cubemaps, const texture_data_type data_type = texture_data_type::RGBA_8, const u8 mipmap_levels = 1)
         {
-            return {data_type, texture_shape::CUBE_MAP, texture_msaa_level::NONE, mipmap_levels, width, height, 0, num_cubemaps * 6, 0};
+            return {.data_type = data_type, .shape = texture_shape::CUBE_MAP, .width = width, .height = height, .layers = num_cubemaps * 6, .mipmap_levels = mipmap_levels};
         }
     };
 
@@ -276,7 +276,7 @@ namespace stardraw
         texture_border_color border_color = texture_border_color::FLOAT_TRANSPARENT;
 
         //Anisotropy is not *strictly* supported in all implementations without extensions, but availablity is near universal.
-        texture_anisotropy_level anisotropy_level = texture_anisotropy_level::X16;
+        texture_anisotropy_level anisotropy_level = texture_anisotropy_level::NONE;
 
         texture_swizzle_mode swizzling = {};
 
@@ -288,9 +288,9 @@ namespace stardraw
 
     namespace texture_sampling_configs
     {
-        constexpr texture_sampling_conifg linear = {};
+        constexpr texture_sampling_conifg linear = {.anisotropy_level = texture_anisotropy_level::X16};
         constexpr texture_sampling_conifg nearest = {.downscale_filter = texture_filtering_mode::NEAREST, .upscale_filter = texture_filtering_mode::NEAREST};
-        constexpr texture_sampling_conifg none = {.downscale_filter = texture_filtering_mode::NEAREST, .upscale_filter = texture_filtering_mode::NEAREST, .anisotropy_level = texture_anisotropy_level::NONE, .mipmap_max_level = 0};
+        constexpr texture_sampling_conifg none = {.downscale_filter = texture_filtering_mode::NEAREST, .upscale_filter = texture_filtering_mode::NEAREST, .mipmap_max_level = 0};
     }
 
     struct texture_descriptor final : descriptor

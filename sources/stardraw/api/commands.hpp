@@ -424,4 +424,40 @@ namespace stardraw
 
         std::string signal_name;
     };
+
+    struct texture_copy_info
+    {
+        u32 read_x;
+        u32 read_y;
+        u32 read_z;
+
+        u32 read_mipmap_level = 0;
+        u32 read_layer = 0;
+
+        u32 write_x;
+        u32 write_y;
+        u32 write_z;
+
+        u32 write_mipmap_level = 0;
+        u32 write_layer = 0;
+
+        u32 copy_width = 1;
+        u32 copy_height = 1;
+        u32 copy_depth = 1;
+        u32 copy_layers = 1;
+    };
+
+    struct texture_copy_command final : command
+    {
+        texture_copy_command(const std::string_view& read_texture, const std::string_view& write_texture, const texture_copy_info& copy_info) : read_texture(read_texture), write_texture(write_texture), copy_info(copy_info) {}
+
+        [[nodiscard]] command_type type() const override
+        {
+            return command_type::TEXTURE_COPY;
+        }
+
+        object_identifier read_texture;
+        object_identifier write_texture;
+        texture_copy_info copy_info;
+    };
 }

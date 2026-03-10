@@ -28,6 +28,7 @@ struct FragmentOut
 };
 
 StructuredBuffer<UniformData> structured;
+Sampler2D texture;
 
 [shader("vertex")]
 VertexOut vertexMain(VertexIn data)
@@ -47,6 +48,6 @@ VertexOut vertexMain(VertexIn data)
 FragmentOut fragmentMain(FragmentIn data : FragmentIn) : SV_Target
 {
     FragmentOut output;
-    output.color = data.color * structured[1].tint;
+    output.color = data.color * structured[1].tint * texture.Sample(data.uv);
     return output;
 };

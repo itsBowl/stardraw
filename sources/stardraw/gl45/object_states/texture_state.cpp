@@ -2,6 +2,7 @@
 #include <format>
 #include <spirv_glsl.hpp>
 
+#include "stardraw/api/memory_transfer.hpp"
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyOpenGL.hpp"
 
@@ -113,6 +114,58 @@ namespace stardraw::gl45
         }
     }
 
+    u32 bytes_per_texture_data_element(const texture_data_type type)
+    {
+        switch (type)
+        {
+            case texture_data_type::DEPTH_32_STENCIL_8: return 5;
+            case texture_data_type::DEPTH_24_STENCIL_8: return 4;
+            case texture_data_type::R_U8: return 1;
+            case texture_data_type::RG_U8: return 2;
+            case texture_data_type::RGB_U8: return 3;
+            case texture_data_type::RGBA_U8: return 4;
+            case texture_data_type::R_U16: return 2;
+            case texture_data_type::RG_U16: return 4;
+            case texture_data_type::RGB_U16: return 6;
+            case texture_data_type::RGBA_U16: return 8;
+            case texture_data_type::R_U32: return 4;
+            case texture_data_type::RG_U32: return 8;
+            case texture_data_type::RGB_U32: return 12;
+            case texture_data_type::RGBA_U32: return 16;
+            case texture_data_type::R_I8: return 1;
+            case texture_data_type::RG_I8: return 2;
+            case texture_data_type::RGB_I8: return 3;
+            case texture_data_type::RGBA_I8: return 4;
+            case texture_data_type::R_I16: return 2;
+            case texture_data_type::RG_I16: return 4;
+            case texture_data_type::RGB_I16: return 6;
+            case texture_data_type::RGBA_I16: return 8;
+            case texture_data_type::R_I32: return 4;
+            case texture_data_type::RG_I32: return 8;
+            case texture_data_type::RGB_I32: return 12;
+            case texture_data_type::RGBA_I32: return 16;
+            case texture_data_type::DEPTH_32: return 4;
+            case texture_data_type::DEPTH_24: return 3;
+            case texture_data_type::DEPTH_16: return 2;
+            case texture_data_type::STENCIL_8: return 1;
+            case texture_data_type::R_8: return 1;
+            case texture_data_type::RG_8: return 2;
+            case texture_data_type::RGB_8: return 3;
+            case texture_data_type::RGBA_8: return 4;
+            case texture_data_type::SRGB_8: return 3;
+            case texture_data_type::SRGBA_8: return 4;
+            case texture_data_type::R_F16: return 2;
+            case texture_data_type::RG_F16: return 4;
+            case texture_data_type::RGB_F16: return 6;
+            case texture_data_type::RGBA_F16: return 8;
+            case texture_data_type::R_F32: return 4;
+            case texture_data_type::RG_F32: return 8;
+            case texture_data_type::RGB_F32: return 12;
+            case texture_data_type::RGBA_F32: return 16;
+            default: return -1;
+        }
+    }
+
     bool is_sampling_config_valid_for_type(const texture_data_type type, const texture_sampling_conifg& sampling_config)
     {
         const bool is_integer_type = is_texture_data_type_integer(type);
@@ -130,61 +183,21 @@ namespace stardraw::gl45
         ZoneScoped;
         TracyGpuZone("[Stardraw] Create texture object");
 
-        num_texture_mipmap_levels = desc.format.mipmap_levels;
-        num_texture_array_layers = desc.format.texture_layers;
-
-        const bool has_msaa = desc.format.msaa != texture_msaa_level::NONE;
-        const bool can_type_be_array = desc.format.shape != texture_shape::_3D;
-        const bool can_shape_be_multisample = desc.format.shape == texture_shape::_2D || desc.format.shape == texture_shape::_3D;
-        const bool is_array = (desc.format.shape != texture_shape::CUBE_MAP && num_texture_array_layers > 1) || num_texture_array_layers > 6;
-
-        gl_texture_target = texture_type_to_gl_target(desc.format.shape, has_msaa, is_array);
-        gl_texture_format = texture_data_type_to_gl_format(desc.format.data_type);
+        const status initial_status = initalize_and_validate_texture_descriptor(desc);
+        if (is_status_error(initial_status))
+        {
+            out_status = initial_status;
+            return;
+        }
 
         const u32 width = desc.format.width;
         const u32 height = desc.format.height;
         const u32 depth = desc.format.depth;
-        const u8 multisample_count = static_cast<u8>(desc.format.msaa);
+        const bool has_msaa = desc.format.msaa != texture_msaa_level::NONE;
 
-        if (num_texture_mipmap_levels <= 0)
-        {
-            out_status = {status_type::INVALID, std::format("Texture '{0}' has zero mipmap layers", desc.identifier().name)};
-            return;
-        }
+        glCreateTextures(gl_texture_target, 1, &gl_texture_id);
 
-        if (num_texture_array_layers <= 0)
-        {
-            out_status = {status_type::INVALID, std::format("Texture '{0}' has zero texture layers", desc.identifier().name)};
-            return;
-        }
-
-        if (!can_shape_be_multisample && has_msaa)
-        {
-            out_status = {status_type::INVALID, std::format("Texture '{0}' shape cannot have MSAA, but msaa level is not zero", desc.identifier().name)};
-            return;
-        }
-
-        if (!can_type_be_array && is_array)
-        {
-            out_status = {status_type::INVALID, std::format("Texture '{0}' shape cannot be an array texture, but has more than 1 texture layer", desc.identifier().name)};
-            return;
-        }
-
-        if (desc.format.shape == texture_shape::CUBE_MAP && num_texture_array_layers % 6 != 0)
-        {
-            out_status = {status_type::INVALID, std::format("Texture '{0}' is a cubemap array texture, but number of texture layers is not a multiple of 6", desc.identifier().name)};
-            return;
-        }
-
-        if (!is_sampling_config_valid_for_type(desc.format.data_type, desc.default_sampling_config))
-        {
-            out_status = {status_type::INVALID, std::format("Provided default sampling config isn't valid for texture '{0}' (are you trying to use linear filtering on an integer texture?)", desc.identifier().name)};
-            return;
-        }
-
-        glCreateTextures(gl_texture_target, 1, &texture_id);
-
-        if (texture_id == 0)
+        if (gl_texture_id == 0)
         {
             out_status = {status_type::BACKEND_ERROR, std::format("Creating texture {0} failed", desc.identifier().name)};
             return;
@@ -194,13 +207,15 @@ namespace stardraw::gl45
         {
             case texture_shape::_1D:
             {
-                if (num_texture_array_layers > 1) glTextureStorage2D(texture_id, num_texture_mipmap_levels, gl_texture_format, width, num_texture_array_layers);
-                else glTextureStorage1D(texture_id, num_texture_mipmap_levels, gl_texture_format, width);
+                if (num_texture_array_layers > 1)
+                    glTextureStorage2D(gl_texture_id, num_texture_mipmap_levels, gl_texture_format, width, num_texture_array_layers);
+                else
+                    glTextureStorage1D(gl_texture_id, num_texture_mipmap_levels, gl_texture_format, width);
                 break;
             }
             case texture_shape::_3D:
             {
-                glTextureStorage3D(texture_id, num_texture_mipmap_levels, gl_texture_format, width, height, depth);
+                glTextureStorage3D(gl_texture_id, num_texture_mipmap_levels, gl_texture_format, width, height, depth);
                 break;
             }
             case texture_shape::_2D:
@@ -209,24 +224,24 @@ namespace stardraw::gl45
                 if (num_texture_array_layers > 1 && has_msaa)
                 {
                     //It's unclear whether the last parameter (fixed sample locations) is actually used by any implementations, so for now I'm not supporting customizing it.
-                    glTextureStorage3DMultisample(texture_id, multisample_count, gl_texture_format, width, height, num_texture_array_layers, GL_TRUE);
+                    glTextureStorage3DMultisample(gl_texture_id, num_texture_msaa_samples, gl_texture_format, width, height, num_texture_array_layers, GL_TRUE);
                     break;
                 }
 
                 if (num_texture_array_layers > 1)
                 {
-                    glTextureStorage3D(texture_id, num_texture_mipmap_levels, gl_texture_format, width, height, num_texture_array_layers);
+                    glTextureStorage3D(gl_texture_id, num_texture_mipmap_levels, gl_texture_format, width, height, num_texture_array_layers);
                     break;
                 }
 
                 if (has_msaa)
                 {
                     //It's unclear whether the last parameter (fixed sample locations) is actually used by any implementations, so for now I'm not supporting customizing it.
-                    glTextureStorage2DMultisample(texture_id, multisample_count, gl_texture_format, width, height, GL_TRUE);
+                    glTextureStorage2DMultisample(gl_texture_id, num_texture_msaa_samples, gl_texture_format, width, height, GL_TRUE);
                     break;
                 }
 
-                glTextureStorage2D(texture_id, num_texture_mipmap_levels, gl_texture_format, width, height);
+                glTextureStorage2D(gl_texture_id, num_texture_mipmap_levels, gl_texture_format, width, height);
                 break;
             }
         }
@@ -245,62 +260,22 @@ namespace stardraw::gl45
             return;
         }
 
-        num_texture_mipmap_levels = 1 + desc.format.mipmap_levels;
-        num_texture_array_layers = desc.format.texture_layers;
-
-        const bool has_msaa = desc.format.msaa != texture_msaa_level::NONE;
-        const bool can_type_be_array = desc.format.shape != texture_shape::_3D;
-        const bool can_shape_be_multisample = desc.format.shape == texture_shape::_2D || desc.format.shape == texture_shape::_3D;
-        const bool is_array = (desc.format.shape != texture_shape::CUBE_MAP && num_texture_array_layers > 1) || num_texture_array_layers > 6;
-
-        gl_texture_target = texture_type_to_gl_target(desc.format.shape, desc.format.msaa != texture_msaa_level::NONE, is_array);
-        gl_texture_format = texture_data_type_to_gl_format(desc.format.data_type);
-
-        if (num_texture_mipmap_levels <= 0)
+        const status initial_status = initalize_and_validate_texture_descriptor(desc);
+        if (is_status_error(initial_status))
         {
-            out_status = {status_type::INVALID, std::format("Texture view '{0}' includes zero mipmap layers", desc.identifier().name)};
+            out_status = initial_status;
             return;
         }
 
-        if (num_texture_array_layers <= 0)
-        {
-            out_status = {status_type::INVALID, std::format("Texture view '{0}' includes zero texture layers", desc.identifier().name)};
-            return;
-        }
+        glGenTextures(1, &gl_texture_id);
 
-        if (!can_shape_be_multisample && has_msaa)
-        {
-            out_status = {status_type::INVALID, std::format("Texture view '{0}' shape cannot have MSAA, but msaa level is not zero", desc.identifier().name)};
-            return;
-        }
-
-        if (!can_type_be_array && is_array)
-        {
-            out_status = {status_type::INVALID, std::format("Texture view '{0}' shape cannot be an array texture, but includes too many texture layers", desc.identifier().name)};
-            return;
-        }
-
-        if (desc.format.shape == texture_shape::CUBE_MAP && num_texture_array_layers % 6 != 0)
-        {
-            out_status = {status_type::INVALID, std::format("Texture view '{0}' shape is cubemap, but number of texture layers included is not a multiple of 6", desc.identifier().name)};
-            return;
-        }
-
-        if (!is_sampling_config_valid_for_type(desc.format.data_type, desc.default_sampling_config))
-        {
-            out_status = {status_type::INVALID, std::format("Provided default sampling config isn't valid for texture view '{0}' (are you trying to use linear filtering on an integer texture?)", desc.identifier().name)};
-            return;
-        }
-
-        glGenTextures(1, &texture_id);
-
-        if (texture_id == 0)
+        if (gl_texture_id == 0)
         {
             out_status = {status_type::BACKEND_ERROR, std::format("Creating texture view {0} failed", desc.identifier().name)};
             return;
         }
 
-        glTextureView(texture_id, gl_texture_target, original->texture_id, gl_texture_format, desc.format.view_texture_base_mipmap, desc.format.mipmap_levels, desc.format.view_texture_base_array_index, num_texture_array_layers);
+        glTextureView(gl_texture_id, gl_texture_target, original->gl_texture_id, gl_texture_format, desc.format.view_texture_base_mipmap, desc.format.mipmap_levels, desc.format.view_texture_base_layer, num_texture_array_layers);
 
         texture_sampling_conifg sampling_config = desc.default_sampling_config;
         sampling_config.mipmap_max_level = std::min(sampling_config.mipmap_max_level, num_texture_mipmap_levels - 1);
@@ -311,11 +286,289 @@ namespace stardraw::gl45
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Delete texture object");
-        glDeleteTextures(1, &texture_id);
+        glDeleteTextures(1, &gl_texture_id);
     }
 
-    GLenum gl_filter_mode_from_modes(const texture_filtering_mode filter, const texture_filtering_mode mipmap_selection)
+    status texture_state::unpack_pixels(const u32 mipmap_level, const u32 x, const u32 y, const u32 z, const u32 width, const u32 height, const u32 depth, const GLenum format, const GLenum gl_data_type) const
     {
+        texture_shape effective_shape = shape;
+        if (num_texture_array_layers > 1 && shape == texture_shape::_1D) effective_shape = texture_shape::_2D;
+        if (num_texture_array_layers > 1 && shape == texture_shape::_2D) effective_shape = texture_shape::_3D;
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+        switch (effective_shape)
+        {
+            case texture_shape::_1D:
+            {
+                glTextureSubImage1D(gl_texture_id, mipmap_level, x, width, format, gl_data_type, nullptr);
+                break;
+            }
+            case texture_shape::_2D:
+            {
+                glTextureSubImage2D(gl_texture_id, mipmap_level, x, y, width, height, format, gl_data_type, nullptr);
+                break;
+            }
+            case texture_shape::_3D:
+            case texture_shape::CUBE_MAP:
+            {
+                glTextureSubImage3D(gl_texture_id, mipmap_level, x, y, z, width, height, depth, format, gl_data_type, nullptr);
+                break;
+            }
+        }
+        return status_type::SUCCESS;
+    }
+
+    status texture_state::copy_pixels(const texture_state* read_texture, const texture_copy_info& copy_info) const
+    {
+        if (!is_view_format_compatible(gl_texture_format, read_texture->gl_texture_format)) return {status_type::INVALID, "Can't transfer between textures; incompatible data formats"};
+        if (!is_view_target_compatible(gl_texture_target, read_texture->gl_texture_target)) return {status_type::INVALID, "Can't transfer between textures; incompatible texture shapes"};
+
+        if (read_texture->num_texture_msaa_samples != num_texture_msaa_samples)
+        {
+            return {status_type::INVALID, "Can't transfer between textures; number of MSAA samples doesn't match"};
+        }
+
+        const u32 read_x = copy_info.read_x;
+        const u32 read_y = copy_info.read_y;
+        const u32 read_z = copy_info.read_z;
+        const u32 write_x = copy_info.write_x;
+        const u32 write_y = copy_info.write_y;
+        const u32 write_z = copy_info.write_z;
+
+        if (read_x + copy_info.copy_width > read_texture->size.x || read_y + copy_info.copy_height > read_texture->size.y || read_z + copy_info.copy_depth > read_texture->size.z)
+        {
+            return {status_type::RANGE_OVERFLOW, "Texture copy dimensions outside the bounds of the read texture"};
+        }
+
+        if (write_x + copy_info.copy_width > size.x || write_y + copy_info.copy_height > size.y || write_z + copy_info.copy_depth > size.z)
+        {
+            return {status_type::RANGE_OVERFLOW, "Texture copy dimensions outside the bounds of the write texture"};
+        }
+
+        if (copy_info.read_mipmap_level >= read_texture->num_texture_mipmap_levels) return {status_type::RANGE_OVERFLOW, "Texture copy mipmap level is outside the bounds of the read texture"};
+        if (copy_info.write_mipmap_level >= num_texture_mipmap_levels) return {status_type::RANGE_OVERFLOW, "Texture copy mipmap level is outside the bounds of the write texture"};
+
+        if (copy_info.read_layer + copy_info.copy_layers >= read_texture->num_texture_array_layers) return {status_type::RANGE_OVERFLOW, "Texture copy array layers are outside the bounds of the read texture"};
+        if (copy_info.write_layer + copy_info.copy_layers >= num_texture_array_layers) return {status_type::RANGE_OVERFLOW, "Texture copy array layers are outside the bounds of the write texture"};
+
+        switch (read_texture->shape)
+        {
+            case texture_shape::_1D: //Copy between 1D textures (or 1D texture arrays)
+            {
+                glCopyImageSubData(read_texture->gl_texture_id, read_texture->gl_texture_target, copy_info.read_mipmap_level, read_x, copy_info.read_layer, 0,
+                                   gl_texture_id, gl_texture_target, copy_info.write_mipmap_level, write_x, copy_info.write_layer, 0, copy_info.copy_width, copy_info.copy_layers, 0);
+                break;
+            }
+            case texture_shape::_2D: //Copy between 2D textures (or 2D texture arrays. Cubemaps are a special kind of 2D texture array)
+            case texture_shape::CUBE_MAP:
+            {
+                glCopyImageSubData(read_texture->gl_texture_id, read_texture->gl_texture_target, copy_info.read_mipmap_level, read_x, read_y, copy_info.read_layer,
+                                   gl_texture_id, gl_texture_target, copy_info.write_mipmap_level, write_x, write_y, copy_info.write_layer, copy_info.copy_width, copy_info.copy_height, copy_info.copy_layers);
+                break;
+            }
+            case texture_shape::_3D: //Copy between 3D textures
+            {
+                glCopyImageSubData(read_texture->gl_texture_id, read_texture->gl_texture_target, copy_info.read_mipmap_level, read_x, read_y, read_z,
+                                   gl_texture_id, gl_texture_target, copy_info.write_mipmap_level, write_x, write_y, write_z, copy_info.copy_width, copy_info.copy_height, copy_info.copy_depth);
+                break;
+            }
+        }
+
+        return status_type::SUCCESS;
+    }
+
+    u64 texture_state::compute_bytes_in_transfer(const texture_memory_transfer_info& info) const
+    {
+        switch (shape)
+        {
+            case texture_shape::_1D: return info.width * info.layers * bytes_per_pixel;
+            case texture_shape::_2D: return info.width * info.height * info.layers * bytes_per_pixel;
+            case texture_shape::_3D: return info.width * info.height * info.depth * info.layers * bytes_per_pixel;
+            case texture_shape::CUBE_MAP: return info.width * info.height * info.layers * bytes_per_pixel;
+            default: return -1;
+        }
+    }
+
+    status texture_state::initalize_and_validate_texture_descriptor(const texture_descriptor& desc)
+    {
+        num_texture_mipmap_levels = desc.format.mipmap_levels;
+        num_texture_array_layers = desc.format.layers;
+        shape = desc.format.shape;
+        data_type = desc.format.data_type;
+        bytes_per_pixel = bytes_per_texture_data_element(data_type);
+        size = {desc.format.width, desc.format.height, desc.format.depth};
+        num_texture_msaa_samples = static_cast<u8>(desc.format.msaa);
+
+        const bool has_msaa = desc.format.msaa != texture_msaa_level::NONE;
+        const bool can_type_be_array = desc.format.shape != texture_shape::_3D;
+        const bool can_shape_be_multisample = desc.format.shape == texture_shape::_2D || desc.format.shape == texture_shape::_3D;
+        const bool is_array = (desc.format.shape != texture_shape::CUBE_MAP && num_texture_array_layers > 1) || num_texture_array_layers > 6;
+
+        gl_texture_target = texture_type_to_gl_target(desc.format.shape, has_msaa, is_array);
+        gl_texture_format = texture_data_type_to_gl_format(desc.format.data_type);
+
+        if (size.x <= 0 || size.y <= 0 || size.z <= 0)
+        {
+            return {status_type::INVALID, std::format("Texture '{0}' has zero size in an axis", desc.identifier().name)};
+        }
+
+        if (num_texture_mipmap_levels <= 0)
+        {
+            return {status_type::INVALID, std::format("Texture '{0}' has zero mipmap layers", desc.identifier().name)};
+        }
+
+        if (num_texture_array_layers <= 0)
+        {
+            return {status_type::INVALID, std::format("Texture '{0}' has zero texture layers", desc.identifier().name)};
+        }
+
+        if (!can_shape_be_multisample && has_msaa)
+        {
+            return {status_type::INVALID, std::format("Texture '{0}' shape cannot have MSAA, but msaa level is not zero", desc.identifier().name)};
+        }
+
+        if (!can_type_be_array && is_array)
+        {
+            return {status_type::INVALID, std::format("Texture '{0}' shape cannot be an array texture, but has more than 1 texture layer", desc.identifier().name)};
+        }
+
+        if (desc.format.shape == texture_shape::CUBE_MAP && num_texture_array_layers % 6 != 0)
+        {
+            return {status_type::INVALID, std::format("Texture '{0}' is a cubemap array texture, but number of texture layers is not a multiple of 6", desc.identifier().name)};
+        }
+
+        if (!is_sampling_config_valid_for_type(desc.format.data_type, desc.default_sampling_config))
+        {
+            return {status_type::INVALID, std::format("Provided default sampling config isn't valid for texture '{0}' (are you trying to use linear filtering on an integer texture?)", desc.identifier().name)};
+        }
+
+        return status_type::SUCCESS;
+    }
+
+    bool does_texture_data_type_have_depth(const texture_data_type& texture_data_type)
+    {
+        switch (texture_data_type)
+        {
+            case texture_data_type::DEPTH_32:
+            case texture_data_type::DEPTH_24:
+            case texture_data_type::DEPTH_16:
+            case texture_data_type::DEPTH_32_STENCIL_8:
+            case texture_data_type::DEPTH_24_STENCIL_8:
+            {
+                return true;
+            }
+            default: return false;
+        }
+    }
+
+    bool does_texture_data_type_have_stencil(const texture_data_type& texture_data_type)
+    {
+        switch (texture_data_type)
+        {
+            case texture_data_type::DEPTH_32_STENCIL_8:
+            case texture_data_type::DEPTH_24_STENCIL_8:
+            case texture_data_type::STENCIL_8:
+            {
+                return true;
+            }
+            default: return false;
+        }
+    }
+
+    status texture_state::prepare_upload(const texture_memory_transfer_info& info, memory_transfer_handle** out_handle) const
+    {
+        ZoneScoped;
+        TracyGpuZone("[Stardraw] Prepare texture upload");
+
+        if (info.x + info.width > size.x || info.y + info.height > size.y || info.z + info.depth > size.z)
+        {
+            return {status_type::RANGE_OVERFLOW, "Texture upload dimensions outside the bounds of the texture"};
+        }
+
+        if (info.mipmap_level >= num_texture_mipmap_levels) return {status_type::RANGE_OVERFLOW, "Texture upload mipmap level is outside the bounds of the texture"};
+        if (info.layer + info.layers > num_texture_array_layers || info.layers < 1) return {status_type::RANGE_OVERFLOW, "Texture upload array layers are outside the bounds of the texture"};
+
+        if (info.channels == texture_memory_transfer_info::pixel_channels::STENCIL && !does_texture_data_type_have_stencil(data_type)) return {status_type::INVALID, "Texture upload channels is set to stencil, but this texture does not contain stencil data!"};
+        if (info.channels == texture_memory_transfer_info::pixel_channels::DEPTH && !does_texture_data_type_have_depth(data_type)) return {status_type::INVALID, "Texture upload channels is set to depth, but this texture does not contain depth data!"};
+
+        GLuint temp_buffer;
+        glCreateBuffers(1, &temp_buffer);
+        if (temp_buffer == 0) return {status_type::BACKEND_ERROR, std::format("Unable to create temporary upload destination for texture")};
+
+        const u64 bytes = compute_bytes_in_transfer(info);
+
+        glNamedBufferStorage(temp_buffer, bytes, nullptr, GL_MAP_WRITE_BIT);
+        GLbyte* temp_buffer_ptr = static_cast<GLbyte*>(glMapNamedBuffer(temp_buffer, GL_WRITE_ONLY));
+        if (temp_buffer_ptr == nullptr)
+        {
+            glDeleteBuffers(1, &temp_buffer);
+            return {status_type::BACKEND_ERROR, std::format("Unable to write to temporary upload destination for texture")};
+        }
+
+        gl_memory_transfer_handle* handle = new gl_memory_transfer_handle();
+        handle->transfer_size = bytes;
+        handle->transfer_destination_address = 0;
+        handle->transfer_buffer_id = temp_buffer;
+        handle->transfer_buffer_ptr = temp_buffer_ptr;
+        handle->transfer_buffer_address = 0;
+        *out_handle = handle;
+        return status_type::SUCCESS;
+    }
+
+    GLenum gl_memory_transfer_data_type(const texture_memory_transfer_info::pixel_data_type& data_type)
+    {
+        switch (data_type)
+        {
+            case texture_memory_transfer_info::pixel_data_type::U8: return GL_UNSIGNED_BYTE;
+            case texture_memory_transfer_info::pixel_data_type::U32: return GL_UNSIGNED_INT;
+            case texture_memory_transfer_info::pixel_data_type::I8: return GL_BYTE;
+            case texture_memory_transfer_info::pixel_data_type::I32: return GL_INT;
+            case texture_memory_transfer_info::pixel_data_type::F32: return GL_FLOAT;
+        }
+        return -1;
+    }
+
+    GLenum gl_channels_format(const texture_memory_transfer_info::pixel_channels& channels)
+    {
+        switch (channels)
+        {
+            case texture_memory_transfer_info::pixel_channels::R: return GL_RED;
+            case texture_memory_transfer_info::pixel_channels::RG: return GL_RG;
+            case texture_memory_transfer_info::pixel_channels::RGB: return GL_RGB;
+            case texture_memory_transfer_info::pixel_channels::RGBA: return GL_RGBA;
+            case texture_memory_transfer_info::pixel_channels::DEPTH: return GL_DEPTH_COMPONENT;
+            case texture_memory_transfer_info::pixel_channels::STENCIL: return GL_STENCIL_INDEX;
+        }
+        return -1;
+    }
+
+    status texture_state::flush_upload(const texture_memory_transfer_info& info, memory_transfer_handle* handle) const
+    {
+        ZoneScoped;
+        TracyGpuZone("[Stardraw] Flush texture upload");
+        const gl_memory_transfer_handle* gl_handle = dynamic_cast<gl_memory_transfer_handle*>(handle);
+        if (gl_handle == nullptr) return {status_type::INVALID, "Invalid memory transfer handle cast - this is an internal bug!"};
+        glUnmapNamedBuffer(gl_handle->transfer_buffer_id);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gl_handle->transfer_buffer_id);
+        status unpack_status = unpack_pixels(info.mipmap_level, info.x, info.y, info.z, info.width, info.height, info.depth, gl_channels_format(info.channels), gl_memory_transfer_data_type(info.data_type));
+        glDeleteBuffers(1, &gl_handle->transfer_buffer_id);
+        delete handle;
+        return unpack_status;
+    }
+
+    GLenum gl_filter_mode_from_modes(const texture_filtering_mode filter, const texture_filtering_mode mipmap_selection, const bool with_mipmaps)
+    {
+        if (!with_mipmaps)
+        {
+            switch (filter)
+            {
+                case texture_filtering_mode::NEAREST: return GL_NEAREST;
+                case texture_filtering_mode::LINEAR: return GL_LINEAR;
+                default: return GL_NEAREST;
+            }
+        }
+
         const u8 option = static_cast<u8>(filter) + static_cast<u8>(mipmap_selection) * 2;
         switch (option)
         {
@@ -396,10 +649,24 @@ namespace stardraw::gl45
 
     bool texture_state::is_valid() const
     {
-        return texture_id != 0;
+        return gl_texture_id != 0 && glIsTexture(gl_texture_id);
     }
 
-    bool is_view_format_compatible(const GLenum source_format, const GLenum view_format)
+    status texture_state::bind_to_texture_slot(const u32 slot) const
+    {
+        glBindTextureUnit(slot, gl_texture_id);
+        return status_type::SUCCESS;
+    }
+
+    status texture_state::bind_to_image_slot(const u32 slot, const u32 mipmap_level, const bool as_array, const u32 array_layer) const
+    {
+        if (mipmap_level >= num_texture_mipmap_levels) return {status_type::INVALID, "Texture does not contain specified mipmap level for image binding"};
+        if (array_layer >= num_texture_array_layers) return {status_type::INVALID, "Texture does not contain specified array layer for image binding"};
+        //glBindImageTexture(slot, gl_texture_id, mipmap_level, as_array, array_layer, access, gl_texture_format);
+        return status_type::UNSUPPORTED;
+    }
+
+    bool texture_state::is_view_format_compatible(const GLenum source_format, const GLenum view_format)
     {
         const std::array<std::vector<GLenum>, 12> compatible_sets = {
             std::vector<GLenum> {GL_RGBA32F, GL_RGBA32UI, GL_RGBA32I},
@@ -425,14 +692,13 @@ namespace stardraw::gl45
         return std::ranges::contains(*set_ptr, source_format);
     }
 
-    bool is_view_target_compatible(const GLenum source_target, const GLenum view_target)
+    bool texture_state::is_view_target_compatible(const GLenum source_target, const GLenum view_target)
     {
         const std::array<std::vector<GLenum>, 11> compatible_sets = {
             std::vector<GLenum> {GL_TEXTURE_1D, GL_TEXTURE_1D_ARRAY},
             {GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY},
             {GL_TEXTURE_3D},
             {GL_TEXTURE_CUBE_MAP, GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP_ARRAY},
-            {GL_TEXTURE_RECTANGLE},
             {GL_TEXTURE_1D_ARRAY, GL_TEXTURE_1D},
             {GL_TEXTURE_2D_ARRAY, GL_TEXTURE_2D},
             {GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP},
@@ -454,10 +720,10 @@ namespace stardraw::gl45
         const u32 min_view_mipmap = view_descriptor.format.view_texture_base_mipmap;
         const u32 max_view_mipmap = min_view_mipmap + view_descriptor.format.mipmap_levels - 1;
 
-        const u32 min_view_layer = view_descriptor.format.view_texture_base_array_index;
-        const u32 max_view_layer = min_view_mipmap + view_descriptor.format.texture_layers - 1;
+        const u32 min_view_layer = view_descriptor.format.view_texture_base_layer;
+        const u32 max_view_layer = min_view_mipmap + view_descriptor.format.layers - 1;
 
-        const bool is_array = (view_descriptor.format.shape != texture_shape::CUBE_MAP && view_descriptor.format.texture_layers > 1) || view_descriptor.format.texture_layers > 6;
+        const bool is_array = (view_descriptor.format.shape != texture_shape::CUBE_MAP && view_descriptor.format.layers > 1) || view_descriptor.format.layers > 6;
 
         if (min_view_mipmap + 1 > num_texture_mipmap_levels) return {status_type::RANGE_OVERFLOW, std::format("Texture view '{0}' is not compatible with source - source has {1} mipmap levels, but requesting index {2}", view_descriptor.identifier().name, num_texture_mipmap_levels, min_view_mipmap)};
         if (max_view_mipmap + 1 > num_texture_mipmap_levels) return {status_type::RANGE_OVERFLOW, std::format("Texture view '{0}' is not compatible with source - source has {1} mipmap levels, but requesting index {2}", view_descriptor.identifier().name, num_texture_mipmap_levels, max_view_mipmap)};
@@ -470,30 +736,35 @@ namespace stardraw::gl45
 
     status texture_state::set_sampling_config(const texture_sampling_conifg& config) const
     {
-        glTextureParameteri(texture_id, GL_TEXTURE_MAG_FILTER, gl_filter_mode_from_modes(config.upscale_filter, config.mipmap_filter));
-        glTextureParameteri(texture_id, GL_TEXTURE_MIN_FILTER, gl_filter_mode_from_modes(config.downscale_filter, config.mipmap_filter));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_MAG_FILTER, gl_filter_mode_from_modes(config.upscale_filter, config.mipmap_filter, false));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_MIN_FILTER, gl_filter_mode_from_modes(config.downscale_filter, config.mipmap_filter, true));
 
-        glTextureParameteri(texture_id, GL_TEXTURE_WRAP_S, gl_wrapping_mode(config.wrapping_mode_x));
-        glTextureParameteri(texture_id, GL_TEXTURE_WRAP_T, gl_wrapping_mode(config.wrapping_mode_y));
-        glTextureParameteri(texture_id, GL_TEXTURE_WRAP_R, gl_wrapping_mode(config.wrapping_mode_z));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_WRAP_S, gl_wrapping_mode(config.wrapping_mode_x));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_WRAP_T, gl_wrapping_mode(config.wrapping_mode_y));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_WRAP_R, gl_wrapping_mode(config.wrapping_mode_z));
 
-        set_texture_border_color(texture_id, config.border_color);
+        set_texture_border_color(gl_texture_id, config.border_color);
 
         if (GLAD_GL_VERSION_4_6 || GLAD_GL_ARB_texture_filter_anisotropic || GLAD_GL_EXT_texture_filter_anisotropic)
         {
             //Anisotropy is not *strictly* core, but it's supported practically universally
-            glTextureParameterf(texture_id, GL_TEXTURE_MAX_ANISOTROPY, static_cast<float>(config.anisotropy_level));
+            glTextureParameterf(gl_texture_id, GL_TEXTURE_MAX_ANISOTROPY, static_cast<float>(config.anisotropy_level));
         }
 
-        glTextureParameteri(texture_id, GL_TEXTURE_BASE_LEVEL, config.mipmap_min_level);
-        glTextureParameteri(texture_id, GL_TEXTURE_MAX_LEVEL, config.mipmap_max_level);
-        glTextureParameterf(texture_id, GL_TEXTURE_LOD_BIAS, config.mipmap_bias);
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_BASE_LEVEL, config.mipmap_min_level);
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_MAX_LEVEL, config.mipmap_max_level);
+        glTextureParameterf(gl_texture_id, GL_TEXTURE_LOD_BIAS, config.mipmap_bias);
 
-        glTextureParameteri(texture_id, GL_TEXTURE_SWIZZLE_R, gl_swizzle_mode(config.swizzling.swizzle_red));
-        glTextureParameteri(texture_id, GL_TEXTURE_SWIZZLE_G, gl_swizzle_mode(config.swizzling.swizzle_green));
-        glTextureParameteri(texture_id, GL_TEXTURE_SWIZZLE_B, gl_swizzle_mode(config.swizzling.swizzle_blue));
-        glTextureParameteri(texture_id, GL_TEXTURE_SWIZZLE_A, gl_swizzle_mode(config.swizzling.swizzle_alpha));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_SWIZZLE_R, gl_swizzle_mode(config.swizzling.swizzle_red));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_SWIZZLE_G, gl_swizzle_mode(config.swizzling.swizzle_green));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_SWIZZLE_B, gl_swizzle_mode(config.swizzling.swizzle_blue));
+        glTextureParameteri(gl_texture_id, GL_TEXTURE_SWIZZLE_A, gl_swizzle_mode(config.swizzling.swizzle_alpha));
 
         return status_type::SUCCESS;
+    }
+
+    texture_shape texture_state::get_shape() const
+    {
+        return shape;
     }
 }

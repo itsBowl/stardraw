@@ -64,7 +64,7 @@ uniform_block uniforms = {
 int main()
 {
     window* wind;
-    stardraw::status wind_status = window::create({graphics_api::GL45}, &wind);
+    stardraw::status wind_status = window::create({.api = graphics_api::GL45, .transparent_framebuffer = true}, &wind);
     wind->set_title("Meow!");
 
     render_context* ctx = wind->get_render_context();
@@ -77,6 +77,7 @@ int main()
             buffer_descriptor("vertices", 300),
             buffer_descriptor("uniforms", 300),
             buffer_descriptor("param-buffer", param_buffer_size * 2),
+            texture_descriptor("tex", texture_format::create_2d(2, 2), texture_sampling_configs::nearest),
             vertex_specification_descriptor(
                 "vertex-spec",
                 {
@@ -92,7 +93,7 @@ int main()
     status made_commands = ctx->create_command_buffer(
         "main",
         {
-            clear_window_command(clear_window_mode::ALL),
+            clear_window_command(clear_window_mode::ALL, {0., 0., 0., 0.}),
             draw_command(draw_mode::TRIANGLES, 3),
         }
     );
@@ -100,7 +101,15 @@ int main()
     void* uniform_mem = layout_shader_buffer_memory(uniforms_layout, &uniforms, sizeof(uniform_block));
     free(uniform_mem);
 
-    status transfer_status = ctx->transfer_memory_immediate(memory_transfer_info::buffer_upload("vertices", 0, sizeof(vertex) * 3), &triangle);
+    std::array<u8, 36> texture_bytes = {
+        255, 255, 255, 127,
+        127, 127, 127, 255,
+        255, 255, 255, 255,
+        0, 0, 0, 127,
+    };
+
+    status transfer_status = ctx->transfer_buffer_memory_immediate({"vertices", 0, sizeof(vertex) * 3}, &triangle);
+    status tex_transfer_status = ctx->transfer_texture_memory_immediate({"tex", 0, 0, 0, 2, 2}, texture_bytes.data());
 
     status init_status = ctx->execute_temp_command_buffer({
         blending_config_command(blending_configs::ALPHA),
@@ -109,6 +118,7 @@ int main()
             {
                 {frag_shader->locate("structured"), shader_parameter_value::buffer("param-buffer")},
                 {frag_shader->locate("structured").index(1), shader_parameter_value::vector(1.0f, 0.0f, 1.0f, 1.0f)},
+                {frag_shader->locate("texture"), shader_parameter_value::texture("tex")}
             }),
         draw_config_command("draw-spec"),
     });

@@ -2,6 +2,7 @@
 #include "window.hpp"
 
 #include <format>
+#include <slang-com-helper.h>
 
 #include "stardraw/internal/internal.hpp"
 
@@ -163,78 +164,88 @@ namespace stardraw::gl45
         }
     }
 
-    status render_context::prepare_memory_transfer(const memory_transfer_info& info, memory_transfer_handle** out_handle)
+    status render_context::prepare_buffer_memory_transfer(const buffer_memory_transfer_info& info, memory_transfer_handle** out_handle)
     {
-        switch (info.target_type)
+        buffer_state* buffer = find_buffer_state(object_identifier(info.target));
+        if (buffer == nullptr) return {status_type::UNKNOWN, std::format("No buffer with name '{0}' in context", info.target)};
+        if (!buffer->is_valid()) return {status_type::INVALID, std::format("Buffer '{0}' is in an invalid state", info.target)};
+
+        switch (info.transfer_type)
         {
-            case memory_transfer_target_type::BUFFER:
+            case buffer_memory_transfer_info::type::UPLOAD_STREAMING:
             {
-                buffer_state* buffer = find_buffer_state(object_identifier(info.target));
-                if (buffer == nullptr) return {status_type::UNKNOWN, std::format("No buffer with name '{0}' in context", info.target)};
-                if (!buffer->is_valid()) return {status_type::INVALID, std::format("Buffer '{0}' is in an invalid state", info.target)};
-
-                switch (info.transfer_type)
-                {
-                    case memory_transfer_type::STREAMING_UPLOAD:
-                    {
-                        memory_transfer_handle* handle;
-                        status prepare_status = buffer->prepare_upload_data_streaming(info.address, info.bytes, &handle);
-                        if (is_status_error(prepare_status)) return prepare_status;
-                        memory_transfers[handle] = info;
-                        *out_handle = handle;
-                        return status_type::SUCCESS;
-                    }
-                    case memory_transfer_type::CHUNKED_UPLOAD:
-                    {
-                        memory_transfer_handle* handle;
-                        status prepare_status = buffer->prepare_upload_data_chunked(info.address, info.bytes, &handle);
-                        if (is_status_error(prepare_status)) return prepare_status;
-                        memory_transfers[handle] = info;
-                        *out_handle = handle;
-                        return status_type::SUCCESS;
-                    }
-                    case memory_transfer_type::UNCHECKED_UPLOAD:
-                    {
-                        memory_transfer_handle* handle;
-                        status prepare_status = buffer->prepare_upload_data_unchecked(info.address, info.bytes, &handle);
-                        if (is_status_error(prepare_status)) return prepare_status;
-                        memory_transfers[handle] = info;
-                        *out_handle = handle;
-                        return status_type::SUCCESS;
-                    }
-                    default: return {status_type::UNIMPLEMENTED};
-                }
+                memory_transfer_handle* handle;
+                status prepare_status = buffer->prepare_upload_data_streaming(info.address, info.bytes, &handle);
+                if (is_status_error(prepare_status)) return prepare_status;
+                buffer_transfers[handle] = info;
+                *out_handle = handle;
+                return status_type::SUCCESS;
             }
-
-            default: return {status_type::UNIMPLEMENTED};
+            case buffer_memory_transfer_info::type::UPLOAD_CHUNK:
+            {
+                memory_transfer_handle* handle;
+                status prepare_status = buffer->prepare_upload_data_chunked(info.address, info.bytes, &handle);
+                if (is_status_error(prepare_status)) return prepare_status;
+                buffer_transfers[handle] = info;
+                *out_handle = handle;
+                return status_type::SUCCESS;
+            }
+            case buffer_memory_transfer_info::type::UPLOAD_UNCHECKED:
+            {
+                memory_transfer_handle* handle;
+                status prepare_status = buffer->prepare_upload_data_unchecked(info.address, info.bytes, &handle);
+                if (is_status_error(prepare_status)) return prepare_status;
+                buffer_transfers[handle] = info;
+                *out_handle = handle;
+                return status_type::SUCCESS;
+            }
+            default: return {status_type::UNSUPPORTED};
         }
     }
 
-    status render_context::flush_memory_transfer(memory_transfer_handle* handle)
+    status render_context::flush_buffer_memory_transfer(memory_transfer_handle* handle)
     {
-        if (!memory_transfers.contains(handle)) return {status_type::UNKNOWN, "Memory transfer handle not recognized - did you create it with a different context?"};
-        const memory_transfer_info info = memory_transfers[handle];
-        memory_transfers.erase(handle);
+        if (!buffer_transfers.contains(handle)) return {status_type::UNKNOWN, "Memory transfer handle not recognized - did you create it with a different context or type?"};
+        const buffer_memory_transfer_info info = buffer_transfers[handle];
+        buffer_transfers.erase(handle);
 
-        switch (info.target_type)
+        const buffer_state* buffer = find_buffer_state(object_identifier(info.target));
+        if (buffer == nullptr) return {status_type::UNKNOWN, std::format("No buffer with name '{0}' in context", info.target)};
+        if (!buffer->is_valid()) return {status_type::INVALID, std::format("Buffer '{0}' is in an invalid state", info.target)};
+        switch (info.transfer_type)
         {
-            case memory_transfer_target_type::BUFFER:
-            {
-                const buffer_state* buffer = find_buffer_state(object_identifier(info.target));
-                if (buffer == nullptr) return {status_type::UNKNOWN, std::format("No buffer with name '{0}' in context", info.target)};
-                if (!buffer->is_valid()) return {status_type::INVALID, std::format("Buffer '{0}' is in an invalid state", info.target)};
-                switch (info.transfer_type)
-                {
-                    case memory_transfer_type::STREAMING_UPLOAD: return buffer->flush_upload_data_streaming(handle);
-                    case memory_transfer_type::CHUNKED_UPLOAD: return buffer->flush_upload_data_chunked(handle);
-                    case memory_transfer_type::UNCHECKED_UPLOAD: return buffer->flush_upload_data_unchecked(handle);
+            case buffer_memory_transfer_info::type::UPLOAD_STREAMING: return buffer->flush_upload_data_streaming(handle);
+            case buffer_memory_transfer_info::type::UPLOAD_CHUNK: return buffer->flush_upload_data_chunked(handle);
+            case buffer_memory_transfer_info::type::UPLOAD_UNCHECKED: return buffer->flush_upload_data_unchecked(handle);
 
-                    default: return {status_type::UNIMPLEMENTED};
-                }
-            }
-
-            default: return {status_type::UNIMPLEMENTED};
+            default: return {status_type::UNSUPPORTED};
         }
+    }
+
+    status render_context::prepare_texture_memory_transfer(const texture_memory_transfer_info& info, memory_transfer_handle** out_handle)
+    {
+        const texture_state* texture = find_texture_state(object_identifier(info.target));
+        if (texture == nullptr) return {status_type::UNKNOWN, std::format("No texture with name '{0}' in context", info.target)};
+        if (!texture->is_valid()) return {status_type::INVALID, std::format("Texture '{0}' is in an invalid state", info.target)};
+
+        memory_transfer_handle* handle;
+        status prepare_status = texture->prepare_upload(info, &handle);
+        if (is_status_error(prepare_status)) return prepare_status;
+        texture_transfers[handle] = info;
+        *out_handle = handle;
+        return status_type::SUCCESS;
+    }
+
+    status render_context::flush_texture_memory_transfer(memory_transfer_handle* handle)
+    {
+        if (!texture_transfers.contains(handle)) return {status_type::UNKNOWN, "Memory transfer handle not recognized - did you create it with a different context or type?"};
+        const texture_memory_transfer_info info = texture_transfers[handle];
+        texture_transfers.erase(handle);
+
+        const texture_state* texture = find_texture_state(object_identifier(info.target));
+        if (texture == nullptr) return {status_type::UNKNOWN, std::format("No texture with name '{0}' in context", info.target)};
+        if (!texture->is_valid()) return {status_type::INVALID, std::format("Texture '{0}' is in an invalid state", info.target)};
+        return texture->flush_upload(info, handle);
     }
 
     status render_context::status_from_last_gl_error()
@@ -548,6 +559,11 @@ namespace stardraw::gl45
                     result_status = bind_shader_buffer_parameter(shader, location, value);
                     break;
                 }
+                case shader_parameter_value::value_type::TEXTURE_REFERENCE:
+                {
+                    result_status = bind_shader_texture_parameter(shader, location, value);
+                    break;
+                }
                 default:
                 {
                     result_status = bind_shader_data_parameter(shader, location, value);
@@ -558,6 +574,74 @@ namespace stardraw::gl45
             if (is_status_error(result_status)) return result_status;
         }
 
+        return status_type::SUCCESS;
+    }
+
+    status render_context::bind_shader_texture_parameter(shader_state* shader, const shader_parameter_location& location, const shader_parameter_value& value)
+    {
+        const binding_location_info binding_info = vk_binding_for_location(location);
+        const u32 actual_slot = binding_info.slot + shader->descriptor_set_binding_offsets[binding_info.set];
+
+        //To bind a texture, we make sure the location is *explicitly* pointed at the texture variable, not something contained inside the texture.
+        if (binding_info.binding_type != location.offset_ptr)
+        {
+            return {status_type::UNSUPPORTED, "The shader parameter location provided cannot have a texture bound to it!"};
+        }
+
+        texture_shape resource_shape;
+        bool is_array;
+
+        switch (binding_info.binding_type->getKind())
+        {
+            case slang::TypeReflection::Kind::Resource:
+            {
+                const u32 shape = binding_info.binding_type->getResourceShape() & ~SlangResourceShape::SLANG_TEXTURE_COMBINED_FLAG;
+                switch (shape)
+                {
+                    case SlangResourceShape::SLANG_TEXTURE_1D_ARRAY: is_array = true;
+                    case SlangResourceShape::SLANG_TEXTURE_1D:
+                    {
+                        resource_shape = texture_shape::_1D;
+                        break;
+                    }
+                    case SlangResourceShape::SLANG_TEXTURE_2D_ARRAY: is_array = true;
+                    case SlangResourceShape::SLANG_TEXTURE_2D:
+                    {
+                        resource_shape = texture_shape::_2D;
+                        break;
+                    }
+                    case SlangResourceShape::SLANG_TEXTURE_CUBE_ARRAY: is_array = true;
+                    case SlangResourceShape::SLANG_TEXTURE_CUBE:
+                    {
+                        resource_shape = texture_shape::CUBE_MAP;
+                        break;
+                    }
+                    case SlangResourceShape::SLANG_TEXTURE_3D:
+                    {
+                        resource_shape = texture_shape::_3D;
+                        break;
+                    }
+                    default:
+                    {
+                        return {status_type::UNSUPPORTED, "The shader parameter location provided cannot have a texture bound to it!"};
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                return {status_type::UNSUPPORTED, "The shader parameter location provided cannot have a texture bound to it!"};
+            }
+        }
+
+        const texture_state* texture = find_texture_state(object_identifier(value.opaque_reference));
+        if (texture == nullptr) return {status_type::UNKNOWN, std::format("Texture object '{0}' not found in context (referenced by shader parameter)", value.opaque_reference)};
+        if (!texture->is_valid()) return {status_type::INVALID, std::format("Texture object '{0}' is in an invalid state (referenced by shader parameter)", value.opaque_reference)};
+        if (texture->get_shape() != resource_shape) return {status_type::INVALID, std::format("Texture object '{0}' can't be bound to this location - wrong texture shape!", value.opaque_reference)};
+
+        status bind_status = texture->bind_to_texture_slot(actual_slot);
+        if (is_status_error(bind_status)) return bind_status;
+        shader->bound_objects[actual_slot] = value.opaque_reference;
         return status_type::SUCCESS;
     }
 
@@ -624,7 +708,7 @@ namespace stardraw::gl45
             return {status_type::INVALID, "Can't upload shader parameter; the shader does not have a backing buffer set for the given location!"};
         }
 
-        return transfer_memory_immediate({shader->bound_objects[actual_slot], location.byte_address, value.bytes.size(), memory_transfer_type::STREAMING_UPLOAD}, value.bytes.data());
+        return transfer_buffer_memory_immediate({shader->bound_objects[actual_slot], location.byte_address, value.bytes.size(), buffer_memory_transfer_info::type::UPLOAD_STREAMING}, value.bytes.data());
     }
 
     status render_context::record_object_state(const object_identifier& identifier, object_state* state)
