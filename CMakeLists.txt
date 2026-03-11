@@ -4,7 +4,7 @@ set(CMAKE_DEBUG_POSTFIX "-debug")
 include(cmake/Config.cmake)
 
 project(${H_PROJECT_NAME} VERSION ${H_PROJECT_VERSION} DESCRIPTION ${H_PROJECT_DESCRIPTION} LANGUAGES CXX)
-add_compile_options(-Wexceptions)
+add_compile_options(/EHsc)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/lib)

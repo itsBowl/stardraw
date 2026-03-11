@@ -14,12 +14,11 @@
 // failed to create image
 // failed to allocate image memory
 // failed to bind image memory
-
 //log of all exit conditions that are fatal on debug:
 // failed to create debug messenger
 // no validation layers
 
-#include "Device.hpp"
+#include "vk_device.hpp"
 
 #include <cstring>
 #include <iostream>
@@ -68,7 +67,7 @@ void destroy_debug_utils_messenger_EXT(
 
 namespace stardraw::vk13 {
 
-    Device::Device(simple_window& _window) : window(_window) {
+    vk_device::vk_device(simple_window& _window) : window(_window) {
         create_instance();
         setup_debug_messenger();
         create_surface();
@@ -77,7 +76,7 @@ namespace stardraw::vk13 {
         create_command_pool();
     }
 
-    Device::~Device() {
+    vk_device::~vk_device() {
         vkDestroyCommandPool(device, command_pool, nullptr);
         vkDestroyDevice(device, nullptr);
 
@@ -89,7 +88,7 @@ namespace stardraw::vk13 {
         vkDestroyInstance(instance, nullptr);
     }
 
-    void Device::create_instance() {
+    void vk_device::create_instance() {
         if (enable_validation_layers && !check_validation_layer_support()) {
             throw std::runtime_error("Validation layers requested, but not available");
         }
@@ -129,7 +128,7 @@ namespace stardraw::vk13 {
         //has_glfw_required_instance_extentions();
     }
 
-    void Device::pick_physical_device() {
+    void vk_device::pick_physical_device() {
         uint32_t device_count = 0;
         vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
         if (device_count == 0) {
@@ -153,7 +152,7 @@ namespace stardraw::vk13 {
         vkGetPhysicalDeviceProperties(physical_device, &properties);
     }
 
-    void Device::create_logical_device() {
+    void vk_device::create_logical_device() {
         queue_family_indices indicies = find_queue_families(physical_device);
 
         std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
@@ -200,7 +199,7 @@ namespace stardraw::vk13 {
         vkGetDeviceQueue(device, indicies.present_family, 0, &present_queue);
     }
 
-    void Device::create_command_pool() {
+    void vk_device::create_command_pool() {
         queue_family_indices indicies = find_physical_queue_families();
 
         VkCommandPoolCreateInfo pool_info = {};
@@ -214,11 +213,11 @@ namespace stardraw::vk13 {
         }
     }
 
-    void Device::create_surface() {
+    void vk_device::create_surface() {
         window.create_window_surface(instance, &surface);
     }
 
-    bool Device::is_device_suitable(VkPhysicalDevice device) {
+    bool vk_device::is_device_suitable(VkPhysicalDevice device) {
         queue_family_indices indicies = find_queue_families(device);
         bool ext_support = check_device_extension_support(device);
 
@@ -234,7 +233,7 @@ namespace stardraw::vk13 {
             supported_features.samplerAnisotropy;
     }
 
-    void Device::populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT &info) {
+    void vk_device::populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT &info) {
         info = {};
         info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
@@ -247,7 +246,7 @@ namespace stardraw::vk13 {
         info.pUserData = nullptr;  // Optional
     }
 
-    void Device::setup_debug_messenger() {
+    void vk_device::setup_debug_messenger() {
         if (!enable_validation_layers) return;
         VkDebugUtilsMessengerCreateInfoEXT info;
         populate_debug_messenger_create_info(info);
@@ -256,7 +255,7 @@ namespace stardraw::vk13 {
         }
     }
 
-    bool Device::check_validation_layer_support() {
+    bool vk_device::check_validation_layer_support() {
         uint32_t count;
         vkEnumerateInstanceLayerProperties(&count, nullptr);
         std::vector<VkLayerProperties> layers(count);
@@ -275,7 +274,7 @@ namespace stardraw::vk13 {
         return true;
     }
 
-    std::vector<const char *> Device::get_required_extensions() {
+    std::vector<const char *> vk_device::get_required_extensions() {
         uint32_t ext_count = 0;
         const char** extentions;
         extentions = glfwGetRequiredInstanceExtensions(&ext_count);
@@ -287,7 +286,7 @@ namespace stardraw::vk13 {
         return ext;
     }
 
-    void Device::has_glfw_required_instance_extensions() {
+    void vk_device::has_glfw_required_instance_extensions() {
         uint32_t ext_count = 0;
         vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
         std::vector<VkExtensionProperties> extentions(ext_count);
@@ -309,7 +308,7 @@ namespace stardraw::vk13 {
         }
     }
 
-    bool Device::check_device_extension_support(VkPhysicalDevice device) {
+    bool vk_device::check_device_extension_support(VkPhysicalDevice device) {
         uint32_t count;
         vkEnumerateDeviceExtensionProperties(device, nullptr, &count, nullptr);
 
@@ -329,7 +328,7 @@ namespace stardraw::vk13 {
         return required_extensions.empty();
     }
 
-    queue_family_indices Device::find_queue_families(VkPhysicalDevice device) {
+    queue_family_indices vk_device::find_queue_families(VkPhysicalDevice device) {
         queue_family_indices indices;
         uint32_t count;
 
@@ -356,7 +355,7 @@ namespace stardraw::vk13 {
         return indices;
     }
 
-    swap_chain_support_details Device::query_swap_chain_support(VkPhysicalDevice device) {
+    swap_chain_support_details vk_device::query_swap_chain_support(VkPhysicalDevice device) {
         swap_chain_support_details details;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
@@ -378,7 +377,7 @@ namespace stardraw::vk13 {
         return details;
     }
 
-    VkFormat Device::find_supported_format(
+    VkFormat vk_device::find_supported_format(
         const std::vector<VkFormat> &candidates,
         VkImageTiling tiling,
         VkFormatFeatureFlags features) {
@@ -395,7 +394,7 @@ namespace stardraw::vk13 {
         }
     }
 
-    uint32_t Device::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties) {
+    uint32_t vk_device::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties) {
         VkPhysicalDeviceMemoryProperties mem_properties;
         vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_properties);
         for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++) {
@@ -408,7 +407,7 @@ namespace stardraw::vk13 {
         throw std::runtime_error("Failed to find suitable memory types");
     }
 
-    void Device::create_buffer(
+    void vk_device::create_buffer(
     VkDeviceSize size,
     VkBufferUsageFlags usage,
     VkMemoryPropertyFlags properties,
@@ -439,7 +438,7 @@ namespace stardraw::vk13 {
     vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
-VkCommandBuffer Device::begin_single_time_commands() {
+VkCommandBuffer vk_device::begin_single_time_commands() {
     VkCommandBufferAllocateInfo alloc_info{};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -457,7 +456,7 @@ VkCommandBuffer Device::begin_single_time_commands() {
     return command_buffer;
 }
 
-void Device::end_single_time_commands(VkCommandBuffer command_buffer)
+void vk_device::end_single_time_commands(VkCommandBuffer command_buffer)
 {
     vkEndCommandBuffer(command_buffer);
 
@@ -472,7 +471,7 @@ void Device::end_single_time_commands(VkCommandBuffer command_buffer)
     vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
 
-void Device::copy_buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void vk_device::copy_buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
     VkCommandBuffer commandBuffer = begin_single_time_commands();
 
     VkBufferCopy copyRegion{};
@@ -484,7 +483,7 @@ void Device::copy_buffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize si
     end_single_time_commands(commandBuffer);
 }
 
-void Device::copy_buffer_to_image(
+void vk_device::copy_buffer_to_image(
     VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t layerCount)
 {
     VkCommandBuffer commandBuffer = begin_single_time_commands();
@@ -512,7 +511,7 @@ void Device::copy_buffer_to_image(
     end_single_time_commands(commandBuffer);
 }
 
-void Device::create_image_with_info(
+void vk_device::create_image_with_info(
     const VkImageCreateInfo& imageInfo,
     VkMemoryPropertyFlags properties,
     VkImage& image,

@@ -2,8 +2,6 @@
 // Created by Bowl on 03/02/2026.
 //
 
-#ifndef STARDRAW_DEVICE_H
-#define STARDRAW_DEVICE_H
 #pragma once
 
 #include "simple_window.hpp"
@@ -29,7 +27,7 @@ namespace stardraw::vk13 {
         [[nodiscard]] inline bool is_complete() const {return graphics_family_has_value && present_family_has_value;}
     };
 
-    class Device {
+    class vk_device {
     public:
 #ifdef NDEBUG
         const bool enable_validation_layers = true;
@@ -37,13 +35,13 @@ namespace stardraw::vk13 {
         const bool enable_validation_layers = true;
 #endif
 
-        Device(simple_window&);
-        ~Device();
+        vk_device(simple_window&);
+        ~vk_device();
 
-        Device(const Device &) = delete;
-        Device &operator=(const Device &) = delete;
-        Device (Device &&) = delete;
-        Device &operator=(Device &&) = delete;
+        vk_device(const vk_device &) = delete;
+        vk_device &operator=(const vk_device &) = delete;
+        vk_device (vk_device &&) = delete;
+        vk_device &operator=(vk_device &&) = delete;
 
         [[nodiscard]] VkCommandPool getCommandPool() const {return command_pool;}
         [[nodiscard]] VkDevice get_device() const {return device;}
@@ -111,5 +109,3 @@ namespace stardraw::vk13 {
         const std::vector<const char*> device_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     };
 }
-
-#endif //STARDRAW_DEVICE_H

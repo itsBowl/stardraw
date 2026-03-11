@@ -2,10 +2,9 @@
 // Created by Bowl on 04/02/2026.
 //
 
-#ifndef STARDRAW_SIMPLE_WINDOW_H
-#define STARDRAW_SIMPLE_WINDOW_H
+
 #pragma once
-#define GLFW_INCLUDE_VULKAN
+#include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <string>
 #include <stdexcept>
@@ -40,5 +39,3 @@ namespace stardraw::vk13 {
         GLFWwindow* window;
     };
 } // stardraw
-
-#endif //STARDRAW_SIMPLE_WINDOW_H

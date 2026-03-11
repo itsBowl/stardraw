@@ -1,4 +1,6 @@
-add_library(stardraw STATIC)
+add_library(stardraw STATIC
+        vk13/vk_pipeline.hpp
+        vk13/vk_pipeline.cpp)
 
 target_sources(stardraw PRIVATE
 
@@ -13,7 +15,7 @@ target_sources(stardraw PRIVATE
         gl45/types.hpp
         gl45/gl_45_window.hpp gl45/gl_45_window.cpp
 
-        vk13/Device.hpp vk13/Device.cpp
+        vk13/vk_device.hpp vk13/vk_device.cpp
         vk13/simple_window.hpp vk13/simple_window.cpp
 )
 
@@ -28,7 +30,7 @@ target_sources(stardraw PUBLIC FILE_SET HEADERS BASE_DIRS ${H_SOURCES_ROOT} FILE
 
         internal/slang.hpp #TEMPORARILY EXPOSED
 )
-
+message(Vulkan Dirs: ${Vulkan_INCLUDE_DIRS})
 target_include_directories(stardraw PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include/stardraw>
@@ -45,5 +47,17 @@ target_link_libraries(stardraw PRIVATE ${OPENGL_LIBRARIES})
 target_link_libraries(stardraw PRIVATE TracyClient)
 target_link_libraries(stardraw PRIVATE glad)
 target_link_libraries(stardraw PRIVATE slang::slang)
-target_link_libraries(stardraw PRIVATE Vulkan:Vulkan)
+target_link_libraries(stardraw PRIVATE Vulkan::Vulkan)
 target_link_libraries(stardraw PRIVATE glfw)
+
+
+add_executable(StardrawTest ./test/main.cpp ./vk13/simple_window.cpp ./vk13/vk_device.cpp
+        vk13/vk_pipeline.hpp
+        vk13/vk_pipeline.cpp)
+
+target_link_libraries(StardrawTest PUBLIC ${OPENGL_LIBRARIES})
+target_link_libraries(StardrawTest PUBLIC TracyClient)
+target_link_libraries(StardrawTest PUBLIC glad)
+target_link_libraries(StardrawTest PUBLIC slang::slang)
+target_link_libraries(StardrawTest PUBLIC Vulkan::Vulkan)
+target_link_libraries(StardrawTest PUBLIC glfw)
