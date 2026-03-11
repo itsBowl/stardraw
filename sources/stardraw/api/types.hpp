@@ -1,30 +1,29 @@
 #pragma once
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
 
-#include "polymorphic_list.hpp"
+#include "starlib/types/starlib_stdint.hpp"
 
 namespace stardraw
 {
-    enum class graphics_api : uint8_t
+    using namespace starlib_stdint;
+    enum class graphics_api : u8
     {
         GL45,
     };
 
-    enum class signal_status : uint8_t
+    enum class signal_status : u8
     {
-        SIGNALLED, NOT_SIGNALLED, TIMED_OUT, UNKNOWN_SIGNAL
+        SIGNALLED, NOT_SIGNALLED, TIMED_OUT, UNKNOWN_SIGNAL, CONTEXT_ERROR
     };
 
-    enum class status_type : uint8_t
+    enum class status_type : u8
     {
         SUCCESS, UNSUPPORTED, UNIMPLEMENTED, NOTHING_TO_DO,
         ALREADY_INITIALIZED, NOT_INITIALIZED,
-        UNKNOWN_SOURCE, UNEXPECTED_NULL, RANGE_OVERFLOW, TIMEOUT,
-        DUPLICATE_NAME, UNKNOWN_NAME,
-        BACKEND_ERROR, BROKEN_SOURCE,
+        UNKNOWN, DUPLICATE, UNEXPECTED, RANGE_OVERFLOW, TIMEOUT,
+        BACKEND_ERROR, INVALID,
     };
 
     struct status
@@ -47,17 +46,12 @@ namespace stardraw
         }
     }
 
-
-
     struct object_identifier
     {
         explicit object_identifier(const std::string_view& string) : hash(std::hash<std::string_view>()(string)), name(string) {}
-        uint64_t hash;
+        u64 hash;
         std::string name;
     };
-
-
-
 
 
 }

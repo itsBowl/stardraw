@@ -1,16 +1,15 @@
-#include "stardraw/api/window.hpp"
 
-#include "stardraw/gl45/gl_45_window.hpp"
+#include "stardraw/api/window.hpp"
+#include "stardraw/gl45/window.hpp"
 
 namespace stardraw
 {
-    window* window::create(const window_config& config)
+    status window::create(const window_config& config, window** out_window)
     {
         switch (config.api)
         {
-            case graphics_api::GL45: return new gl45_window(config);
+            case graphics_api::GL45: return gl45::window::create_gl45_window(config, out_window);
+            default: return { status_type::UNSUPPORTED, "Provided graphics api is not supported." };
         }
-
-        return nullptr;
     }
 }

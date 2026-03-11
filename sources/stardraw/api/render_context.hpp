@@ -2,67 +2,65 @@
 
 #include <string_view>
 
-#include "api_impl.hpp"
 #include "commands.hpp"
 #include "descriptors.hpp"
+#include "memory_transfer.hpp"
 
 namespace stardraw
 {
+    using namespace starlib_stdint;
     class render_context;
-    typedef std::unique_ptr<render_context> render_context_handle;
+    class async_upload_handle;
 
     class render_context
     {
     public:
-        static render_context_handle create();
-        ~render_context();
+        virtual ~render_context() = default;
 
-        render_context(render_context& other) = delete;                      //COPY CONSTRUCTOR
-        render_context(render_context&& other) = delete;                     //MOVE CONSTRUCTOR
-        render_context& operator=(render_context& other) = delete;           //COPY ASSIGNMENT
-        render_context& operator=(render_context&& other) noexcept = delete; //MOVE ASSIGNMENT
+        [[nodiscard]] virtual status execute_command_buffer(const std::string_view& name) = 0;
+        [[nodiscard]] virtual status execute_temp_command_buffer(const command_list&& cmd_list) = 0;
+        [[nodiscard]] virtual status create_command_buffer(const std::string_view& name, const command_list&& cmd_list) = 0;
+        [[nodiscard]] virtual status delete_command_buffer(const std::string_view& name) = 0;
+        [[nodiscard]] virtual status create_objects(const descriptor_list&& descriptors) = 0;
+        [[nodiscard]] virtual status delete_object(descriptor_type type, const std::string_view& name) = 0;
 
-        status create_backend(graphics_api api);
+        [[nodiscard]] virtual signal_status check_signal(const std::string_view& name) = 0;
+        [[nodiscard]] virtual signal_status wait_signal(const std::string_view& name, const u64 timeout_nanos) = 0;
 
-        [[nodiscard]] status execute_command_buffer(const std::string_view& name) const;
-        [[nodiscard]] status execute_temp_command_buffer(command_list_handle cmd_list) const;
-        [[nodiscard]] status create_command_buffer(const std::string_view& name, command_list_handle cmd_list) const;
-        [[nodiscard]] status delete_command_buffer(const std::string_view& name) const;
-        [[nodiscard]] status create_objects(const descriptor_list_handle descriptors) const;
-        [[nodiscard]] status delete_object(const std::string_view& name) const;
+        //Create a memory transfer handle for uploading or downloading data to/from a buffer.
+        //Memory transfer handles are single-use and threadsafe.
+        [[nodiscard]] virtual status prepare_buffer_memory_transfer(const buffer_memory_transfer_info& info, memory_transfer_handle** out_handle) = 0;
 
-        [[nodiscard]] signal_status check_signal(const std::string_view& name) const;
-        [[nodiscard]] signal_status wait_signal(const std::string_view& name, const uint64_t timeout_nanos) const;
+        //Flush a memory transfer to/from a buffer, completing or cancelling it. Any memory writes by the transfer are gaurenteed to be visible after flushing.
+        //The handle will be deleted by this call.
+        [[nodiscard]] virtual status flush_buffer_memory_transfer(memory_transfer_handle* handle) = 0;
 
-        template <typename... command_types>
-        [[nodiscard]] status execute_commands(const command_types&... commands)
+        //Creates and processes a memory transfer immediately. Blocks until the transfer is completed or an error is generated.
+        [[nodiscard]] inline status transfer_buffer_memory_immediate(const buffer_memory_transfer_info& info, void* data)
         {
-            command_list_builder builder;
-            (builder.add(std::forward<const command_types&...>(commands)), ...);
-            command_list_handle list = builder.finish();
-            return execute_temp_command_buffer(std::move(list));
+            memory_transfer_handle* transfer_handle;
+            status prepare_status = prepare_buffer_memory_transfer(info, &transfer_handle);
+            if (is_status_error(prepare_status)) return prepare_status;
+            transfer_handle->transfer(data);
+            return flush_buffer_memory_transfer(transfer_handle);
         }
 
-        template <typename... command_types>
-        [[nodiscard]] status emplace_command_buffer(const std::string_view& name, const command_types&... commands)
-        {
-            command_list_builder builder;
-            (builder.add(std::forward<const command_types&>(commands)), ...);
-            command_list_handle list = builder.finish();
-            return create_command_buffer(name, std::move(list));
-        }
+        //Create a memory transfer handle for uploading or downloading data to/from a texture
+        //Memory transfer handles are single-use and threadsafe.
+        [[nodiscard]] virtual status prepare_texture_memory_transfer(const texture_memory_transfer_info& info, memory_transfer_handle** out_handle) = 0;
 
-        template <typename... descriptor_types>
-        [[nodiscard]] status emplace_objects(const descriptor_types&... descriptors)
-        {
-            descriptor_list_builder builder;
-            (builder.add(std::forward<const descriptor_types&>(descriptors)), ...);
-            descriptor_list_handle list = builder.finish();
-            return create_objects(std::move(list));
-        }
+        //Flush a memory transfer to/from a buffer, completing or cancelling it. Any memory writes by the transfer are gaurenteed to be visible after flushing.
+        //The handle will be deleted by this call.
+        [[nodiscard]] virtual status flush_texture_memory_transfer(memory_transfer_handle* handle) = 0;
 
-    private:
-        render_context() = default;
-        api_impl* backend = nullptr;
+        //Creates and processes a memory transfer immediately. Blocks until the transfer is completed or an error is generated.
+        [[nodiscard]] inline status transfer_texture_memory_immediate(const texture_memory_transfer_info& info, void* data)
+        {
+            memory_transfer_handle* transfer_handle;
+            status prepare_status = prepare_texture_memory_transfer(info, &transfer_handle);
+            if (is_status_error(prepare_status)) return prepare_status;
+            transfer_handle->transfer(data);
+            return flush_texture_memory_transfer(transfer_handle);
+        }
     };
 }

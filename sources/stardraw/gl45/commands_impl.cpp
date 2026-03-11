@@ -1,12 +1,12 @@
 #include <format>
-#include <glad/glad.h>
 
-#include "gl45_impl.hpp"
+#include "render_context.hpp"
 #include "tracy/Tracy.hpp"
 #include "tracy/TracyOpenGL.hpp"
 
 namespace stardraw::gl45
 {
+    using namespace starlib_stdint;
     inline GLenum gl_draw_mode(const draw_mode mode)
     {
         switch (mode)
@@ -31,7 +31,7 @@ namespace stardraw::gl45
         return -1;
     }
 
-    inline uint32_t gl_type_size(const GLenum type)
+    inline u32 gl_type_size(const GLenum type)
     {
         switch (type)
         {
@@ -45,18 +45,6 @@ namespace stardraw::gl45
             case GL_DOUBLE: return sizeof(GLdouble);
             default: return -1;
         }
-    }
-
-    inline GLenum gl_buffer_attach_point(const buffer_attachment_type attachment)
-    {
-        switch (attachment)
-        {
-            case buffer_attachment_type::SHADER_STORAGE_BLOCK: return GL_SHADER_STORAGE_BUFFER;
-            case buffer_attachment_type::SHADER_UNIFORM_BLOCK: return GL_UNIFORM_BUFFER;
-            case buffer_attachment_type::SHADER_ATOMIC_COUNTER_BLOCK: return GL_ATOMIC_COUNTER_BUFFER;
-        }
-
-        return -1;
     }
 
     inline void gl_set_flag(const GLenum flag, const bool enable, const GLuint index = 0)
@@ -113,114 +101,78 @@ namespace stardraw::gl45
         return -1;
     }
 
-    status gl45_impl::execute_draw_cmd(const draw_command* cmd)
+    status render_context::execute_draw(const draw_command* cmd) const
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute draw cmd");
-
-        GLsizeiptr index_offset_unused;
-        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, false);
-        if (is_status_error(bind_result)) return bind_result;
-
+        if (active_draw_specification == nullptr) return {status_type::INVALID, "No draw specification is currently active"};
         glDrawArraysInstancedBaseInstance(gl_draw_mode(cmd->mode), cmd->start_vertex, cmd->count, cmd->instances, cmd->start_instance);
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_draw_indexed(const draw_indexed_command* cmd)
+    status render_context::execute_draw_indexed(const draw_indexed_command* cmd) const
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute draw indexed cmd");
 
-        GLsizeiptr index_offset;
-        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset, true);
-        if (is_status_error(bind_result)) return bind_result;
+        if (active_draw_specification == nullptr) return {status_type::INVALID, "No draw specification is currently active"};
+        if (!active_draw_specification->has_index_buffer) return {status_type::INVALID, "The current draw specification does not have an index buffer for indexed drawing"};
 
         const GLenum index_element_type = gl_index_size(cmd->index_type);
-        const uint32_t index_element_size = gl_type_size(index_element_type);
+        const u32 index_element_size = gl_type_size(index_element_type);
 
-        glDrawElementsInstancedBaseVertexBaseInstance(gl_draw_mode(cmd->mode), cmd->count, index_element_type, reinterpret_cast<const void*>(cmd->start_index * index_element_size + index_offset), cmd->instances, cmd->vertex_index_offset, cmd->start_instance);
+        glDrawElementsInstancedBaseVertexBaseInstance(gl_draw_mode(cmd->mode), cmd->count, index_element_type, reinterpret_cast<const void*>(cmd->start_index * index_element_size), cmd->instances, cmd->vertex_index_offset, cmd->start_instance);
 
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_draw_indirect(const draw_indirect_command* cmd)
+    status render_context::execute_draw_indirect(const draw_indirect_command* cmd) const
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute draw indirect cmd");
 
-        GLsizeiptr index_offset_unused;
-        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, false);
-        if (is_status_error(bind_result)) return bind_result;
+        if (active_draw_specification == nullptr) return {status_type::INVALID, "No draw specification is currently active"};
 
-        glMultiDrawArraysIndirect(gl_draw_mode(cmd->mode), reinterpret_cast<const void*>(cmd->indirect_source_offset * sizeof(draw_arrays_indirect_params)), cmd->draw_count, 0);
+        glMultiDrawArraysIndirect(gl_draw_mode(cmd->mode), reinterpret_cast<const void*>(cmd->indirect_offset * sizeof(draw_arrays_indirect_params)), cmd->draw_count, 0);
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_draw_indexed_indirect(const draw_indexed_indirect_command* cmd)
+    status render_context::execute_draw_indexed_indirect(const draw_indexed_indirect_command* cmd) const
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute draw indirect cmd");
 
-        GLsizeiptr index_offset_unused;
-        status bind_result = bind_vertex_specification_state(cmd->vertex_specification_source, index_offset_unused, true);
-        if (is_status_error(bind_result)) return bind_result;
-
-        //NOTE: will not work properly if a streaming buffer is used for indices
+        if (active_draw_specification == nullptr) return {status_type::INVALID, "No draw specification is currently active"};
+        if (!active_draw_specification->has_index_buffer) return {status_type::INVALID, "The current draw specification does not have an index buffer for indexed drawing"};
 
         const GLenum index_element_type = gl_index_size(cmd->index_type);
 
-        glMultiDrawElementsIndirect(gl_draw_mode(cmd->mode), index_element_type, reinterpret_cast<const void*>(cmd->indirect_source_offset * sizeof(draw_elements_indirect_params)), cmd->draw_count, 0);
+        glMultiDrawElementsIndirect(gl_draw_mode(cmd->mode), index_element_type, reinterpret_cast<const void*>(cmd->indirect_offset * sizeof(draw_elements_indirect_params)), cmd->draw_count, 0);
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_buffer_upload(const buffer_upload_command* cmd)
-    {
-        ZoneScoped;
-        TracyGpuZone("[Stardraw] Execute buffer upload cmd");
-
-        buffer_state* buffer_state = find_gl_buffer_state(cmd->buffer_identifier);
-        if (buffer_state == nullptr) return { status_type::UNKNOWN_SOURCE, std::format("No buffer with name '{0}' in pipeline", cmd->buffer_identifier.name) };
-        if (!buffer_state->is_valid()) return{ status_type::BROKEN_SOURCE, std::format("Buffer '{0}' is in an invalid state", cmd->buffer_identifier.name) };
-
-        switch (cmd->upload_type)
-        {
-            case buffer_upload_type::UNSAFE_DIRECT: return buffer_state->upload_data_direct(cmd->upload_address, cmd->upload_data, cmd->upload_bytes);
-            case buffer_upload_type::SAFE_STREAMING: return buffer_state->upload_data_staged(cmd->upload_address, cmd->upload_data, cmd->upload_bytes);
-            case buffer_upload_type::SAFE_ONE_TIME: return buffer_state->upload_data_temp_copy(cmd->upload_address, cmd->upload_data, cmd->upload_bytes);
-        }
-
-        return  { status_type::UNSUPPORTED, "Uknowmn buffer upload type" };
-    }
-
-    status gl45_impl::execute_buffer_copy(const buffer_copy_command* cmd)
+    status render_context::execute_buffer_copy(const buffer_copy_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute buffer copy cmd");
 
-        const buffer_state* source_state = find_gl_buffer_state(cmd->source_identifier);
-        if (source_state == nullptr) return { status_type::UNKNOWN_SOURCE, std::format("No buffer with name '{0}' in pipeline", cmd->source_identifier.name) };
-        if (!source_state->is_valid()) return{ status_type::BROKEN_SOURCE, std::format("Buffer '{0}' is in an invalid state", cmd->source_identifier.name) };
+        const buffer_state* source_state = find_buffer_state(cmd->source_buffer);
+        if (source_state == nullptr) return { status_type::UNKNOWN, std::format("No buffer with name '{0}' in context", cmd->source_buffer.name) };
+        if (!source_state->is_valid()) return{ status_type::INVALID, std::format("Buffer '{0}' is in an invalid state", cmd->source_buffer.name) };
 
-        const buffer_state* dest_state = find_gl_buffer_state(cmd->dest_identifier);
-        if (dest_state == nullptr) return { status_type::UNKNOWN_SOURCE, std::format("No buffer with name '{0}' in pipeline", cmd->dest_identifier.name) };
-        if (!dest_state->is_valid()) return{ status_type::BROKEN_SOURCE, std::format("Buffer '{0}' is in an invalid state", cmd->dest_identifier.name) };
+        const buffer_state* dest_state = find_buffer_state(cmd->dest_buffer);
+        if (dest_state == nullptr) return { status_type::UNKNOWN, std::format("No buffer with name '{0}' in context", cmd->dest_buffer.name) };
+        if (!dest_state->is_valid()) return{ status_type::INVALID, std::format("Buffer '{0}' is in an invalid state", cmd->dest_buffer.name) };
 
-        if (!source_state->is_in_buffer_range(cmd->source_address, cmd->bytes)) return {status_type::RANGE_OVERFLOW, std::format("Requested copy range is out of range in buffer '{0}'", cmd->source_identifier.name)};
-        if (!dest_state->is_in_buffer_range(cmd->dest_address, cmd->bytes)) return {status_type::RANGE_OVERFLOW, std::format("Requested copy range is out of range in buffer '{0}'", cmd->dest_identifier.name)};
+        if (!source_state->is_in_buffer_range(cmd->source_address, cmd->bytes)) return {status_type::RANGE_OVERFLOW, std::format("Requested copy range is out of range in buffer '{0}'", cmd->source_buffer.name)};
+        if (!dest_state->is_in_buffer_range(cmd->dest_address, cmd->bytes)) return {status_type::RANGE_OVERFLOW, std::format("Requested copy range is out of range in buffer '{0}'", cmd->dest_buffer.name)};
 
         return dest_state->copy_data(source_state->gl_id(), cmd->source_address, cmd->dest_address, cmd->bytes);
     }
 
-    status gl45_impl::execute_buffer_attach(const buffer_attach_command* cmd)
+    status render_context::execute_draw_config(const draw_config_command* cmd)
     {
-        ZoneScoped;
-        TracyGpuZone("[Stardraw] Execute buffer attach cmd");
-
-        const buffer_state* buffer_state = find_gl_buffer_state(cmd->buffer_identifier);
-        if (buffer_state == nullptr) return { status_type::UNKNOWN_SOURCE, std::format("No buffer with name '{0}' in pipeline", cmd->buffer_identifier.name) };
-        if (!buffer_state->is_valid()) return{ status_type::BROKEN_SOURCE, std::format("Buffer '{0}' is in an invalid state", cmd->buffer_identifier.name) };
-
-        return buffer_state->bind_to_slot(gl_buffer_attach_point(cmd->attachment_type), cmd->attachment_index);
+        return bind_draw_specification_state(cmd->draw_specification);
     }
 
     inline GLenum gl_blend_factor(const blending_factor factor)
@@ -263,7 +215,7 @@ namespace stardraw::gl45
     }
 
 
-    status gl45_impl::execute_config_blending(const config_blending_command* cmd)
+    status render_context::execute_config_blending(const blending_config_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute config blending cmd");
@@ -322,7 +274,7 @@ namespace stardraw::gl45
         return -1;
     }
 
-    status gl45_impl::execute_config_stencil(const config_stencil_command* cmd)
+    status render_context::execute_config_stencil(const stencil_config_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute config stencil cmd");
@@ -338,7 +290,7 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_config_scissor(const config_scissor_command* cmd)
+    status render_context::execute_config_scissor(const scissor_config_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute config scissor cmd");
@@ -351,7 +303,7 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_config_face_cull(const config_face_cull_command* cmd)
+    status render_context::execute_config_face_cull(const face_cull_config_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute config face cull cmd");
@@ -368,7 +320,7 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_config_depth_test(const config_depth_test_command* cmd)
+    status render_context::execute_config_depth_test(const depth_test_config_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute config depth test cmd");
@@ -382,7 +334,7 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_config_depth_range(const config_depth_range_command* cmd)
+    status render_context::execute_config_depth_range(const depth_range_config_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute config depth range cmd");
@@ -391,7 +343,7 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
-    status gl45_impl::execute_clear_window(const clear_window_command* cmd)
+    status render_context::execute_clear_window(const clear_window_command* cmd)
     {
         ZoneScoped;
         TracyGpuZone("[Stardraw] Execute clear window cmd");
@@ -405,4 +357,35 @@ namespace stardraw::gl45
         return status_type::SUCCESS;
     }
 
+    status render_context::execute_shader_parameters_upload(const shader_config_command* cmd)
+    {
+        ZoneScoped;
+        TracyGpuZone("[Stardraw] Execute shader parameters upload cmd");
+        shader_state* shader = find_shader_state(cmd->shader);
+        if (shader == nullptr) return { status_type::UNKNOWN, std::format("Referenced shader object '{0}' not found in context (referenced by shader parameters upload command)", cmd->shader.name) };
+        if (!shader->is_valid()) return {status_type::INVALID, std::format("Shader object '{0}' is in an invalid state (referenced by shader parameters upload command)", cmd->shader.name) };
+
+        if (cmd->erase_previous) shader->clear_parameters();
+
+        for (const shader_parameter& parameter : cmd->parameters)
+        {
+            const status write_status = shader->upload_parameter(parameter);
+            if (is_status_error(write_status)) return write_status;
+        }
+
+        return status_type::SUCCESS;
+    }
+
+    status render_context::execute_signal(const signal_command* cmd)
+    {
+        ZoneScoped;
+        TracyGpuZone("[Stardraw] Execute signal creation cmd");
+        if (signals.contains(cmd->signal_name))
+        {
+            glDeleteSync(signals[cmd->signal_name].sync_point);
+        }
+
+        signals[cmd->signal_name] = { glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)};
+        return status_type::SUCCESS;
+    }
 }

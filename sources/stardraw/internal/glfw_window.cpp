@@ -6,6 +6,16 @@
 
 namespace stardraw
 {
+    static bool has_loaded_glfw;
+
+    void check_load_glfw()
+    {
+        if (!has_loaded_glfw)
+        {
+            has_loaded_glfw = (glfwInit() == GLFW_TRUE);
+        }
+    }
+
     status glfw_window::set_title(const std::string& title)
     {
         ZoneScoped;
@@ -13,7 +23,7 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::set_icon(const uint32_t width, const uint32_t height, void* rgba8_pixels)
+    status glfw_window::set_icon(const u32 width, const u32 height, void* rgba8_pixels)
     {
         ZoneScoped;
         GLFWimage image;
@@ -27,7 +37,7 @@ namespace stardraw
     status glfw_window::set_cursor_mode(const cursor_mode mode)
     {
         ZoneScoped;
-        int32_t mode_id = GLFW_CURSOR_NORMAL;
+        i32 mode_id = GLFW_CURSOR_NORMAL;
         switch (mode)
         {
             case cursor_mode::NORMAL:
@@ -71,7 +81,7 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::set_opacity(const float opacity)
+    status glfw_window::set_opacity(const f32 opacity)
     {
         ZoneScoped;
         glfwSetWindowOpacity(handle, opacity);
@@ -92,14 +102,14 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::set_size(const uint32_t width, const uint32_t height)
+    status glfw_window::set_size(const u32 width, const u32 height)
     {
         ZoneScoped;
         glfwSetWindowSize(handle, width, height);
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::set_position(const int32_t x, const int32_t y)
+    status glfw_window::set_position(const i32 x, const i32 y)
     {
         ZoneScoped;
         glfwSetWindowPos(handle, x, y);
@@ -120,7 +130,7 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::set_resizing_limit(const uint32_t min_width, const uint32_t min_height, const uint32_t max_width, const uint32_t max_height)
+    status glfw_window::set_resizing_limit(const u32 min_width, const u32 min_height, const u32 max_width, const u32 max_height)
     {
         ZoneScoped;
         glfwSetWindowSizeLimits(handle, min_width, min_height, max_width, max_height);
@@ -134,7 +144,7 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::set_aspect_ratio_limit(const uint16_t width, const uint32_t height)
+    status glfw_window::set_aspect_ratio_limit(const u32 width, const u32 height)
     {
         ZoneScoped;
         glfwSetWindowAspectRatio(handle, width, height);
@@ -148,7 +158,7 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::to_exclusive_fullscreen(const uint32_t display_index, const fullscreen_window_config config)
+    status glfw_window::to_exclusive_fullscreen(const u32 display_index, const fullscreen_window_config config)
     {
         ZoneScoped;
         const std::vector<GLFWmonitor*> monitors = get_monitors();
@@ -158,20 +168,20 @@ namespace stardraw
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::to_windowed_fullscreen(const uint32_t display_index)
+    status glfw_window::to_windowed_fullscreen(const u32 display_index)
     {
         ZoneScoped;
         const std::vector<GLFWmonitor*> monitors = get_monitors();
         if (display_index >= monitors.size()) return {status_type::RANGE_OVERFLOW, std::format("Display index {0} is out of range", display_index)};
         GLFWmonitor* desired_monitor = monitors[display_index];
 
-        int32_t monitor_x, monitor_y, monitor_width, monitor_height;
+        i32 monitor_x, monitor_y, monitor_width, monitor_height;
         glfwGetMonitorWorkarea(desired_monitor, &monitor_x, &monitor_y, &monitor_width, &monitor_height);
         glfwSetWindowMonitor(handle, nullptr, monitor_x, monitor_y, monitor_width, monitor_height, GLFW_DONT_CARE);
         return status_from_last_glfw_error();
     }
 
-    status glfw_window::to_windowed(const uint32_t width, const uint32_t height, const int32_t x, const int32_t y)
+    status glfw_window::to_windowed(const u32 width, const u32 height, const i32 x, const i32 y)
     {
         ZoneScoped;
         glfwSetWindowMonitor(handle, nullptr, x, y, width, height, GLFW_DONT_CARE);
@@ -205,7 +215,7 @@ namespace stardraw
         GLFWmonitor* primary = glfwGetPrimaryMonitor();
         const std::vector<GLFWmonitor*> monitors = get_monitors();
 
-        for (uint32_t idx = 0; idx < monitors.size(); idx++)
+        for (u32 idx = 0; idx < monitors.size(); idx++)
         {
             if (primary != monitors[idx]) continue;
             return get_display_info(primary, idx);
@@ -214,7 +224,7 @@ namespace stardraw
         return get_display_info(primary, 0);
     }
 
-    std::vector<fullscreen_window_config> glfw_window::get_supported_fullscreen_configs(const uint32_t display_index) const
+    std::vector<fullscreen_window_config> glfw_window::get_supported_fullscreen_configs(const u32 display_index) const
     {
         ZoneScoped;
         std::vector<fullscreen_window_config> results;
@@ -223,13 +233,13 @@ namespace stardraw
         if (display_index >= monitors.size()) return results;
         GLFWmonitor* desired_monitor = monitors[display_index];
 
-        int32_t num_modes;
+        i32 num_modes;
         const GLFWvidmode* modes = glfwGetVideoModes(desired_monitor, &num_modes);
 
-        for (uint32_t idx = 0; idx < num_modes; idx++)
+        for (u32 idx = 0; idx < num_modes; idx++)
         {
             const GLFWvidmode mode = modes[idx];
-            results.push_back(fullscreen_window_config {static_cast<uint32_t>(mode.width), static_cast<uint32_t>(mode.height), static_cast<uint32_t>(mode.refreshRate)});
+            results.push_back(fullscreen_window_config {static_cast<u32>(mode.width), static_cast<u32>(mode.height), static_cast<u32>(mode.refreshRate)});
         }
 
         return results;
@@ -240,7 +250,7 @@ namespace stardraw
         ZoneScoped;
         std::vector<display_info> display_infos;
         const std::vector<GLFWmonitor*> monitors = get_monitors();
-        for (uint32_t idx = 0; idx < monitors.size(); idx++)
+        for (u32 idx = 0; idx < monitors.size(); idx++)
         {
             display_infos.push_back(get_display_info(monitors[idx], idx));
         }
@@ -265,12 +275,12 @@ namespace stardraw
         close_request_calback = func;
     }
 
-    void glfw_window::set_resized_callback(const std::function<void(window* window, const uint32_t width, const uint32_t height)> func)
+    void glfw_window::set_resized_callback(const std::function<void(window* window, const u32 width, const u32 height)> func)
     {
         resize_callback = func;
     }
 
-    void glfw_window::set_repositioned_callback(const std::function<void(window* window, const uint32_t x, const uint32_t y)> func)
+    void glfw_window::set_repositioned_callback(const std::function<void(window* window, const u32 x, const u32 y)> func)
     {
         reposition_callback = func;
     }
@@ -295,12 +305,23 @@ namespace stardraw
         redraw_callback = func;
     }
 
-    void glfw_window::create_window(const window_config& config)
+    glfw_window::glfw_window()
+    {
+        check_load_glfw();
+    }
+
+    status glfw_window::initialize_window(const window_config& config)
     {
         ZoneScoped;
         glfwWindowHint(GLFW_AUTO_ICONIFY, false);
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, config.transparent_framebuffer ? GLFW_TRUE : GLFW_FALSE);
         handle = glfwCreateWindow(config.width, config.height, config.title.c_str(), nullptr, nullptr);
+
+        if (handle == nullptr)
+        {
+            return status_from_last_glfw_error();
+        }
+
         glfwSetWindowUserPointer(handle, this);
 
         glfwSetWindowCloseCallback(handle, close_requested_event);
@@ -311,13 +332,15 @@ namespace stardraw
         glfwSetWindowIconifyCallback(handle, minimized_restored_event);
         glfwSetWindowMaximizeCallback(handle, maximized_restored_event);
         glfwSetFramebufferSizeCallback(handle, framebuffer_resize_event);
+
+        return status_type::SUCCESS;
     }
 
     status glfw_window::status_from_last_glfw_error()
     {
         ZoneScoped;
         const char* description;
-        const int32_t error_code = glfwGetError(&description);
+        const i32 error_code = glfwGetError(&description);
         if (error_code == GLFW_NO_ERROR) return status_type::SUCCESS;
         return status { status_type::BACKEND_ERROR, std::string(description) };
     }
@@ -336,13 +359,13 @@ namespace stardraw
         return monitors;
     }
 
-    display_info glfw_window::get_display_info(GLFWmonitor* monitor, const uint32_t monitor_idx)
+    display_info glfw_window::get_display_info(GLFWmonitor* monitor, const u32 monitor_idx)
     {
         ZoneScoped;
-        int32_t x, y, width, height;
+        i32 x, y, width, height;
         glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
         const char* display_name = glfwGetMonitorName(monitor);
-        return display_info {std::string(display_name), monitor_idx, static_cast<uint32_t>(width), static_cast<uint32_t>(height), x, y};
+        return display_info {std::string(display_name), monitor_idx, static_cast<u32>(width), static_cast<u32>(height), x, y};
     }
 
     void glfw_window::close_requested_event(GLFWwindow* window)
@@ -352,35 +375,35 @@ namespace stardraw
         if (window == _this->handle && _this->close_request_calback != nullptr) _this->close_request_calback(_this);
     }
 
-    void glfw_window::resized_event(GLFWwindow* window, const int32_t width, const int32_t height)
+    void glfw_window::resized_event(GLFWwindow* window, const i32 width, const i32 height)
     {
         ZoneScoped;
         stardraw::glfw_window* _this = static_cast<stardraw::glfw_window*>(glfwGetWindowUserPointer(window));
         if (window == _this->handle && _this->resize_callback != nullptr) _this->resize_callback(_this, width, height);
     }
 
-    void glfw_window::repositioned_event(GLFWwindow* window, const int32_t x, const int32_t y)
+    void glfw_window::repositioned_event(GLFWwindow* window, const i32 x, const i32 y)
     {
         ZoneScoped;
         stardraw::glfw_window* _this = static_cast<stardraw::glfw_window*>(glfwGetWindowUserPointer(window));
         if (window == _this->handle && _this->reposition_callback != nullptr) _this->reposition_callback(_this, x, y);
     }
 
-    void glfw_window::minimized_restored_event(GLFWwindow* window, const int32_t minimized)
+    void glfw_window::minimized_restored_event(GLFWwindow* window, const i32 minimized)
     {
         ZoneScoped;
         stardraw::glfw_window* _this = static_cast<stardraw::glfw_window*>(glfwGetWindowUserPointer(window));
         if (window == _this->handle && _this->minimise_restore_callback != nullptr) _this->minimise_restore_callback(_this, minimized);
     }
 
-    void glfw_window::maximized_restored_event(GLFWwindow* window, const int32_t maximized)
+    void glfw_window::maximized_restored_event(GLFWwindow* window, const i32 maximized)
     {
         ZoneScoped;
         stardraw::glfw_window* _this = static_cast<stardraw::glfw_window*>(glfwGetWindowUserPointer(window));
         if (window == _this->handle && _this->maximise_restore_callback != nullptr) _this->maximise_restore_callback(_this, maximized);
     }
 
-    void glfw_window::focused_event(GLFWwindow* window, const int32_t focused)
+    void glfw_window::focused_event(GLFWwindow* window, const i32 focused)
     {
         ZoneScoped;
         stardraw::glfw_window* _this = static_cast<stardraw::glfw_window*>(glfwGetWindowUserPointer(window));
@@ -394,7 +417,7 @@ namespace stardraw
         if (window == _this->handle && _this->redraw_callback != nullptr) _this->redraw_callback(_this);
     }
 
-    void glfw_window::framebuffer_resize_event(GLFWwindow* window, const int32_t width, const int32_t height)
+    void glfw_window::framebuffer_resize_event(GLFWwindow* window, const i32 width, const i32 height)
     {
         ZoneScoped;
         stardraw::glfw_window* _this = static_cast<stardraw::glfw_window*>(glfwGetWindowUserPointer(window));

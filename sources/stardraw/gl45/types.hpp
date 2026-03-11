@@ -1,70 +1,70 @@
 #pragma once
-#include <cstdint>
 
-#include "glad/glad.h"
 #include "stardraw/api/descriptors.hpp"
+#include "stardraw/api/memory_transfer.hpp"
+#include "stardraw/gl45/gl_headers.hpp"
 
 namespace stardraw::gl45
 {
-    [[nodiscard]] constexpr uint32_t vertex_element_size(const vertex_element_type type)
+    [[nodiscard]] constexpr u32 vertex_element_size(const vertex_data_type type)
     {
         switch (type)
         {
-            case UINT_U8:
-            case INT_I8:
-            case FLOAT_U8_NORM:
-            case FLOAT_I8_NORM: return 1;
+            case vertex_data_type::UINT_U8:
+            case vertex_data_type::INT_I8:
+            case vertex_data_type::FLOAT_U8_NORM:
+            case vertex_data_type::FLOAT_I8_NORM: return 1;
 
-            case UNT2_U8:
-            case UINT_U16:
-            case INT2_I8:
-            case INT_I16:
-            case FLOAT2_U8_NORM:
-            case FLOAT2_I8_NORM:
-            case FLOAT_U16_NORM:
-            case FLOAT_I16_NORM:
-            case FLOAT_F16: return 2;
+            case vertex_data_type::UINT2_U8:
+            case vertex_data_type::UINT_U16:
+            case vertex_data_type::INT2_I8:
+            case vertex_data_type::INT_I16:
+            case vertex_data_type::FLOAT2_U8_NORM:
+            case vertex_data_type::FLOAT2_I8_NORM:
+            case vertex_data_type::FLOAT_U16_NORM:
+            case vertex_data_type::FLOAT_I16_NORM:
+            case vertex_data_type::FLOAT_F16: return 2;
 
-            case UINT3_U8:
-            case INT3_I8:
-            case FLOAT3_U8_NORM:
-            case FLOAT3_I8_NORM: return 3;
+            case vertex_data_type::UINT3_U8:
+            case vertex_data_type::INT3_I8:
+            case vertex_data_type::FLOAT3_U8_NORM:
+            case vertex_data_type::FLOAT3_I8_NORM: return 3;
 
-            case UINT4_U8:
-            case UINT2_U16:
-            case UINT_U32:
-            case INT4_I8:
-            case INT2_I16:
-            case INT_I32:
-            case FLOAT4_U8_NORM:
-            case FLOAT4_I8_NORM:
-            case FLOAT2_U16_NORM:
-            case FLOAT2_I16_NORM:
-            case FLOAT2_F16:
-            case FLOAT_F32: return 4;
+            case vertex_data_type::UINT4_U8:
+            case vertex_data_type::UINT2_U16:
+            case vertex_data_type::UINT_U32:
+            case vertex_data_type::INT4_I8:
+            case vertex_data_type::INT2_I16:
+            case vertex_data_type::INT_I32:
+            case vertex_data_type::FLOAT4_U8_NORM:
+            case vertex_data_type::FLOAT4_I8_NORM:
+            case vertex_data_type::FLOAT2_U16_NORM:
+            case vertex_data_type::FLOAT2_I16_NORM:
+            case vertex_data_type::FLOAT2_F16:
+            case vertex_data_type::FLOAT_F32: return 4;
 
-            case UINT3_U16:
-            case INT3_I16:
-            case FLOAT3_U16_NORM:
-            case FLOAT3_I16_NORM:
-            case FLOAT3_F16: return 6;
+            case vertex_data_type::UINT3_U16:
+            case vertex_data_type::INT3_I16:
+            case vertex_data_type::FLOAT3_U16_NORM:
+            case vertex_data_type::FLOAT3_I16_NORM:
+            case vertex_data_type::FLOAT3_F16: return 6;
 
-            case UINT4_U16:
-            case UINT2_U32:
-            case INT4_I16:
-            case INT2_I32:
-            case FLOAT4_U16_NORM:
-            case FLOAT4_I16_NORM:
-            case FLOAT4_F16:
-            case FLOAT2_F32: return 8;
+            case vertex_data_type::UINT4_U16:
+            case vertex_data_type::UINT2_U32:
+            case vertex_data_type::INT4_I16:
+            case vertex_data_type::INT2_I32:
+            case vertex_data_type::FLOAT4_U16_NORM:
+            case vertex_data_type::FLOAT4_I16_NORM:
+            case vertex_data_type::FLOAT4_F16:
+            case vertex_data_type::FLOAT2_F32: return 8;
 
-            case UINT3_U32:
-            case INT3_I32:
-            case FLOAT3_F32: return 12;
+            case vertex_data_type::UINT3_U32:
+            case vertex_data_type::INT3_I32:
+            case vertex_data_type::FLOAT3_F32: return 12;
 
-            case UINT4_U32:
-            case INT4_I32:
-            case FLOAT4_F32: return 16;
+            case vertex_data_type::UINT4_U32:
+            case vertex_data_type::INT4_I32:
+            case vertex_data_type::FLOAT4_F32: return 16;
         }
         return 0;
     }
@@ -72,19 +72,19 @@ namespace stardraw::gl45
     #pragma pack(push, 1)
     struct draw_arrays_indirect_params
     {
-        uint32_t vertex_count;
-        uint32_t instance_count;
-        uint32_t vertex_begin;
-        uint32_t instance_begin;
+        u32 vertex_count;
+        u32 instance_count;
+        u32 vertex_begin;
+        u32 instance_begin;
     };
 
     struct draw_elements_indirect_params
     {
-        uint32_t vertex_count;
-        uint32_t instance_count;
-        uint32_t index_begin;
-        int32_t vertex_begin;
-        uint32_t instance_begin;
+        u32 vertex_count;
+        u32 instance_count;
+        u32 index_begin;
+        i32 vertex_begin;
+        u32 instance_begin;
     };
     #pragma pack(pop)
 
@@ -98,5 +98,32 @@ namespace stardraw::gl45
     struct signal_state
     {
         GLsync sync_point;
+    };
+
+    class gl_memory_transfer_handle final : public memory_transfer_handle
+    {
+    public:
+        status transfer(void* data) override
+        {
+            if (current_status != memory_transfer_status::READY) return {status_type::INVALID, "Transfer has already been called on this handle!"};
+            current_status = memory_transfer_status::TRANSFERRING;
+            memcpy(transfer_buffer_ptr, data, transfer_size);
+            current_status = memory_transfer_status::COMPLETE;
+            return status_type::SUCCESS;
+        }
+        memory_transfer_status transfer_status() override
+        {
+            return current_status;
+        }
+
+        ~gl_memory_transfer_handle() override = default;
+
+        void* transfer_buffer_ptr = nullptr;
+        GLuint transfer_buffer_id = 0;
+        u64 transfer_buffer_address = 0;
+        u64 transfer_destination_address = 0;
+        u64 transfer_size = 0;
+        GLsync* sync_ptr = nullptr;
+        std::atomic<stardraw::memory_transfer_status> current_status = memory_transfer_status::READY;
     };
 }
