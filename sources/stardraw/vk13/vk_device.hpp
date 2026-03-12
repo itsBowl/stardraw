@@ -43,9 +43,9 @@ namespace stardraw::vk13 {
         vk_device (vk_device &&) = delete;
         vk_device &operator=(vk_device &&) = delete;
 
-        [[nodiscard]] VkCommandPool getCommandPool() const {return command_pool;}
+        [[nodiscard]] VkCommandPool get_command_pool() const {return command_pool;}
         [[nodiscard]] VkDevice get_device() const {return device;}
-        [[nodiscard]] VkPhysicalDevice get_physical_device() {return physical_device;}
+        [[nodiscard]] VkPhysicalDevice get_physical_device() const {return physical_device;}
         [[nodiscard]] VkSurfaceKHR get_surface() const { return surface; }
         [[nodiscard]] VkQueue get_graphics_queue() const { return graphics_queue; }
         [[nodiscard]] VkQueue get_present_queue() const { return present_queue; }

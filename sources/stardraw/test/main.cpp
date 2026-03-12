@@ -3,9 +3,6 @@
 //
 
 #include "main.hpp"
-
-
-
 #include <iostream>
 
 vk_test_app::vk_test_app() {
@@ -19,7 +16,7 @@ vk_test_app::~vk_test_app() {
 void vk_test_app::run() {
     while (!window.shouldClose()) {
         glfwPollEvents();
-        std::cout << "Test run\n";
+        //std::cout << "Test run\n";
     }
 
     std::cout << "Ending test run\n";

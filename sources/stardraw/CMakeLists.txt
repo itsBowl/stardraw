@@ -1,6 +1,10 @@
 add_library(stardraw STATIC
         vk13/vk_pipeline.hpp
-        vk13/vk_pipeline.cpp)
+        vk13/vk_pipeline.cpp
+        vk13/vk_render.cpp
+        vk13/vk_render.cpp
+        vk13/vk_swapchain.hpp
+        vk13/vk_swapchain.cpp)
 
 target_sources(stardraw PRIVATE
 
@@ -32,6 +36,7 @@ target_sources(stardraw PUBLIC FILE_SET HEADERS BASE_DIRS ${H_SOURCES_ROOT} FILE
         api/shaders.hpp
         api/shader_parameter_value.hpp
 )
+message(Vulkan Dirs: ${Vulkan_INCLUDE_DIRS})
 
 target_include_directories(stardraw PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -39,7 +44,7 @@ target_include_directories(stardraw PRIVATE
         ${Vulkan_INCLUDE_DIRS}
 )
 
-target_compile_options(stardraw PUBLIC /EHsc -Wno-microsoft-extra-qualification)
+target_compile_options(stardraw PUBLIC /EHsc)
 
 set_target_properties(stardraw PROPERTIES LINKER_LANGUAGE CXX)
 
@@ -53,3 +58,23 @@ target_link_libraries(stardraw PRIVATE slang::slang)
 target_link_libraries(stardraw PRIVATE Vulkan::Vulkan)
 target_link_libraries(stardraw PRIVATE glfw)
 target_link_libraries(stardraw PRIVATE spirv-cross-glsl)
+
+
+add_executable(StardrawTest ./test/main.cpp ./vk13/simple_window.cpp
+
+        vk13/vk_pipeline.cpp
+
+        vk13/vk_render.cpp
+
+        vk13/vk_swapchain.cpp
+
+        vk13/vk_device.cpp)
+
+target_link_libraries(StardrawTest PUBLIC ${OPENGL_LIBRARIES})
+target_link_libraries(StardrawTest PUBLIC TracyClient)
+target_link_libraries(StardrawTest PUBLIC glad)
+target_link_libraries(StardrawTest PUBLIC slang::slang)
+target_link_libraries(StardrawTest PUBLIC Vulkan::Vulkan)
+target_link_libraries(StardrawTest PUBLIC glfw)
+target_link_libraries(StardrawTest PUBLIC spirv-cross-glsl)
+

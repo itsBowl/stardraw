@@ -3,8 +3,9 @@
 //
 
 #pragma once
-#include "stardraw/vk13/simple_window.hpp"
-#include "stardraw/vk13/vk_device.hpp"
+#include "simple_window.hpp"
+#include "vk_device.hpp"
+#include "vk_swapchain.hpp"
 
 #include <memory>
 #include <vector>
@@ -35,11 +36,12 @@ namespace stardraw::vk13 {
         void end_swapchain_render_pass(VkCommandBuffer);
 
     private:
+        simple_window& window;
         vk_device& device;
-        std::unique_ptr<swap_chain> swapchain;
+        std::unique_ptr<vk_swapchain> swapchain;
         std::vector<VkCommandBuffer> cmd_buffers;
 
-        uint32_t imageIdx;
+        uint32_t image_idx;
         int frame_index{0};
         bool is_frame_started{false};
 

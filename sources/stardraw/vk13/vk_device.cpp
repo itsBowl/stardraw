@@ -25,7 +25,7 @@
 #include <queue>
 #include <set>
 #include <unordered_set>
-#include <stardraw/api/commands.hpp>
+//#include <stardraw/api/commands.hpp>
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

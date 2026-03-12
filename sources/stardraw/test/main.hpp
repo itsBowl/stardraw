@@ -11,10 +11,10 @@ public:
     vk_test_app();
     ~vk_test_app();
 
+
     void run();
 private:
     stardraw::vk13::simple_window window{800, 600, "StardrawTest"};
     stardraw::vk13::vk_device device{window};
-
 
 };
